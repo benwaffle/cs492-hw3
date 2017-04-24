@@ -6,13 +6,11 @@
 
 void parseFileList(FILE* file) {
   int fileSize = 0;
-  int line = 1;
   char filePath[100000];
   int ret = -1;
   // format: inode #blocks permissions ?? user group size month day {year or time} name
   while ((ret = fscanf(file, " %*i %*i %*s %*i %*s %*s %i %*s %*i %*s %[^\n]\n", &fileSize, filePath)) != EOF) {
-    printf("Line %d\t\tFile Size: %8i\t\tFile Path: %s\n", line, fileSize, filePath);
-    line++;
+    printf("File Size: %8i\tFile Path: %s\n", fileSize, filePath);
   }
 }
 
