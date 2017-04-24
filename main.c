@@ -5,6 +5,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
+#include "vector.h"
+
+struct directoryNode {
+  struct directoryNode *parent;
+  vector children;
+} directoryNode;
 
 char *mkstring(char *fmt, ...) {
   va_list args;
@@ -37,6 +43,10 @@ void parseFileList(FILE* file) {
     if (!res)
       perror("strptime");
   }
+}
+
+void parseDirectoryStructure(FILE* file) {
+  //foreach node created, run   vector_init(directorNode->&children);
 }
 
 int main(int argc, char *argv[]) {
