@@ -5,12 +5,14 @@
 #include <stdio.h>
 
 void parseFileList(FILE* file) {
-  int fileSize = 0;
+  int ret, size, day;
   char filePath[100000];
-  int ret = -1;
+  char month[4] = {0};
+  char yearOrTime[10];
   // format: inode #blocks permissions ?? user group size month day {year or time} name
-  while ((ret = fscanf(file, " %*i %*i %*s %*i %*s %*s %i %*s %*i %*s %[^\n]\n", &fileSize, filePath)) != EOF) {
-    printf("File Size: %8i\tFile Path: %s\n", fileSize, filePath);
+  while ((ret = fscanf(file, " %*i %*i %*s %*i %*s %*s %i %s %i %s %[^\n]\n",
+          &size, month, &day, yearOrTime, filePath)) != EOF) {
+    printf("%s\n\tsize: %d\n\tdate: %s %d %s\n\n", filePath, size, month, day, yearOrTime);
   }
 }
 
