@@ -17,7 +17,7 @@ static void vector_resize(vector *v, int capacity) {
   void **items = realloc(v->items, sizeof(void *) * capacity);
   if (items) {
     v->items = items;
-    v->capcity = capacity;
+    v->capacity = capacity;
   }
 }
 
