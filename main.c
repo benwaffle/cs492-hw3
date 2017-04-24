@@ -29,11 +29,11 @@ void parseFileList(FILE* file) {
   // format: inode #blocks permissions ?? user group size month day {year or time} name
   while ((ret = fscanf(file, " %*i %*i %*s %*i %*s %*s %i %s %i %s %[^\n]\n",
           &size, month, &day, yearOrTime, filePath)) != EOF) {
-    printf("%s\n\tsize: %d\n\tdate: %s %d %s\n\n", filePath, size, month, day, yearOrTime);
+    printf("%s\n\tsize: %d\n\tdate: %s %d %s\n", filePath, size, month, day, yearOrTime);
 
     char *datestr = mkstring("%s %d %s", month, day, yearOrTime);
     char *res;
-    struct tm date;
+    struct tm date = {0};
     if (yearOrTime[2] == ':') { // time, 12:34
       res = strptime(datestr, "%b %d %H:%M", &date);
     } else { // year 2017
@@ -42,6 +42,8 @@ void parseFileList(FILE* file) {
     free(datestr);
     if (!res)
       perror("strptime");
+    printf("\tparsed date = %s\n", asctime(&date));
+    printf("\n");
   }
 }
 
