@@ -42,6 +42,11 @@ void parseFileList(FILE* file) {
     free(datestr);
     if (!res)
       perror("strptime");
+    if (date.tm_year == 0) { // when we have the time, but not the year
+      time_t now = time(NULL);
+      struct tm *nowt = localtime(&now);
+      date.tm_year = nowt->tm_year;
+    }
     printf("\tparsed date = %s\n", asctime(&date));
     printf("\n");
   }
