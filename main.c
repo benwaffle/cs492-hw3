@@ -85,7 +85,7 @@ void findOrCreateChild(char* path, dirNode *root) {
           .parent = current
         };
         vectorAdd(&current->children, &new);
-        current = &current->children.items[vectorLen(&current->children)];
+        current = &new;
         printf("Creating node %s\n", current->name);
       }
       // printf("%s\n", token);
