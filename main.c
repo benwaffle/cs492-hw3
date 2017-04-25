@@ -5,9 +5,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 #include "vector.h"
 
 struct directoryNode {
+  char* value;
   struct directoryNode *parent;
   vector children;
 } directoryNode;
@@ -52,8 +54,28 @@ void parseFileList(FILE* file) {
   }
 }
 
+void findOrCreateChild(char* path, struct directoryNode *root) {
+  const char s[2] = "/";
+  char *token;
+  token = strtok(path, s);
+
+  while( token != NULL )
+  {
+    printf( "%s\n", token );
+    token = strtok(NULL, s);
+  }
+}
+
 void parseDirectoryStructure(FILE* file) {
+  struct directoryNode *root = NULL;
+  root->value = "/";
+  vector_init(&root->children);
   //foreach node created, run   vector_init(directorNode->&children);
+  int ret;
+  char str[10000];
+  while ((ret = fscanf(file, "%s\n", str)) != EOF) {
+    findOrCreateChild(str, root);
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -67,5 +89,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   FILE *f = fopen(argv[1], "r");
+  FILE *f_directory = fopen(argv[2], "r");
   parseFileList(f);
+  parseDirectoryStructure(f_directory);
 }
