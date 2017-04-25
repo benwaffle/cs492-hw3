@@ -9,7 +9,7 @@
 #include "vector.h"
 
 typedef struct dirNode {
-  char* value;
+  char *name;
   struct dirNode *parent;
   vector children;
 } dirNode;
@@ -66,13 +66,15 @@ void findOrCreateChild(char* path, dirNode *root) {
 }
 
 void parseDirectoryStructure(FILE* file) {
-  dirNode *root = NULL;
-  root->value = "/";
-  vectorInit(&root->children);
+  dirNode root = {
+    .name = "/",
+    .parent = NULL
+  };
+  vectorInit(&root.children);
   int ret;
   char str[10000];
   while ((ret = fscanf(file, "%s\n", str)) != EOF) {
-    findOrCreateChild(str, root);
+    findOrCreateChild(str, &root);
   }
 }
 
