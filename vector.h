@@ -1,5 +1,4 @@
-#ifndef VECTOR_H
-#define VECTOR_H
+#pragma once
 
 #define VECTOR_INIT_CAPACITY 4
 
@@ -16,5 +15,3 @@ void vectorSet(vector*, int, void*);
 void *vectorGet(vector*, int);
 void vectorDelete(vector*, int);
 void vectorFree(vector*);
-
-#endif
