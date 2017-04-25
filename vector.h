@@ -9,12 +9,12 @@ typedef struct vector {
   int total;
 } vector;
 
-void vector_init(vector*);
-int vector_total(vector*);
-void vector_add(vector*, void*);
-void vector_set(vector*, int, void*);
-void *vector_get(vector*, int);
-void vector_delete(vector*, int);
-void vector_free(vector*);
+void vectorInit(vector*);
+int vectorTotal(vector*);
+void vectorAdd(vector*, void*);
+void vectorSet(vector*, int, void*);
+void *vectorGet(vector*, int);
+void vectorDelete(vector*, int);
+void vectorFree(vector*);
 
 #endif

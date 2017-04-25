@@ -8,11 +8,11 @@
 #include <string.h>
 #include "vector.h"
 
-struct directoryNode {
+typedef struct dirNode {
   char* value;
-  struct directoryNode *parent;
+  struct dirNode *parent;
   vector children;
-} directoryNode;
+} dirNode;
 
 char *mkstring(char *fmt, ...) {
   va_list args;
@@ -54,23 +54,21 @@ void parseFileList(FILE* file) {
   }
 }
 
-void findOrCreateChild(char* path, struct directoryNode *root) {
+void findOrCreateChild(char* path, dirNode *root) {
   const char s[2] = "/";
   char *token;
   token = strtok(path, s);
 
-  while( token != NULL )
-  {
+  while(token != NULL) {
     printf( "%s\n", token );
     token = strtok(NULL, s);
   }
 }
 
 void parseDirectoryStructure(FILE* file) {
-  struct directoryNode *root = NULL;
+  dirNode *root = NULL;
   root->value = "/";
-  vector_init(&root->children);
-  //foreach node created, run   vector_init(directorNode->&children);
+  vectorInit(&root->children);
   int ret;
   char str[10000];
   while ((ret = fscanf(file, "%s\n", str)) != EOF) {

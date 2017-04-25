@@ -3,17 +3,17 @@
 
 #include "vector.h"
 
-void vector_init(vector *v) {
+void vectorInit(vector *v) {
   v->capacity = VECTOR_INIT_CAPACITY;
   v->total = 4;
   v->items = malloc(sizeof(void *) * v->capacity);
 }
 
-int vector_total(vector *v) {
+int vectorTotal(vector *v) {
   return v->total;
 }
 
-static void vector_resize(vector *v, int capacity) {
+static void vectorResize(vector *v, int capacity) {
   void **items = realloc(v->items, sizeof(void *) * capacity);
   if (items) {
     v->items = items;
@@ -21,27 +21,27 @@ static void vector_resize(vector *v, int capacity) {
   }
 }
 
-void vector_add(vector *v, void *item) {
+void vectorAdd(vector *v, void *item) {
   if (v->capacity == v->total) {
-    vector_resize(v, v->capacity * 2);
+    vectorResize(v, v->capacity * 2);
   }
   v->items[v->total++] = item;
 }
 
-void vector_set(vector *v, int index, void *item) {
+void vectorSet(vector *v, int index, void *item) {
   if (index >= 0 && index < v->total) {
     v->items[index] = item;
   }
 }
 
-void *vector_get(vector *v, int index) {
+void *vectorGet(vector *v, int index) {
   if (index >= 0 && index < v->total) {
     return v->items[index];
   }
   return NULL;
 }
 
-void vector_delete(vector *v, int index) {
+void vectorDelete(vector *v, int index) {
   if (index < 0 || index >= v->total) {
     return;
   }
@@ -56,10 +56,10 @@ void vector_delete(vector *v, int index) {
   v->total--;
 
   if (v->total > 0 && v->total == v->capacity / 4) {
-    vector_resize(v, v->capacity / 2);
+    vectorResize(v, v->capacity / 2);
   }
 }
 
-void vector_free(vector *v) {
+void vectorFree(vector *v) {
   free(v->items);
 }
