@@ -26,19 +26,6 @@ void vectorAdd(vector *v, void *item) {
   if (v->capacity == v->len) {
     vectorResize(v, v->capacity * 2);
   }
-}
-
-void vectorSet(vector *v, int index, void *item) {
-  if (index >= 0 && index < v->total) {
-    v->items[index] = item;
-  }
-}
-
-void *vectorGet(vector *v, int index) {
-  if (index >= 0 && index < v->total) {
-    return v->items[index];
-  }
-  return NULL;
   v->items[v->len++] = item;
 }
 
