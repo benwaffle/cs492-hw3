@@ -29,7 +29,7 @@ void parseFileList(FILE* file) {
   char month[4] = {0};
   char yearOrTime[10];
   // format: inode #blocks permissions ?? user group size month day {year or time} name
-  while ((ret = fscanf(file, " %*i %*i %*s %*i %*s %*s %i %s %i %s %[^\n]\n",
+  while ((ret = fscanf(file, " %*d %*d %*s %*d %*s %*s %d %s %d %s %[^\n]\n",
           &size, month, &day, yearOrTime, filePath)) != EOF) {
     printf("%s\n\tsize: %d\n\tdate: %s %d %s\n", filePath, size, month, day, yearOrTime);
 
