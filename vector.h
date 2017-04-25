@@ -2,7 +2,7 @@
 
 #define VECTOR_INIT_CAPACITY 4
 
-typedef struct vector {
+typedef struct {
   void **items;
   int capacity;
   int total;
