@@ -5,11 +5,11 @@
 typedef struct {
   void **items;
   int capacity;
-  int total;
+  int len;
 } vector;
 
 void vectorInit(vector*);
-int vectorTotal(vector*);
+int vectorLen(vector*);
 void vectorAdd(vector*, void*);
 void vectorSet(vector*, int, void*);
 void *vectorGet(vector*, int);

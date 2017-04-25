@@ -1,16 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "vector.h"
 
 void vectorInit(vector *v) {
   v->capacity = VECTOR_INIT_CAPACITY;
-  v->total = 4;
+  v->len = 0;
   v->items = malloc(sizeof(void *) * v->capacity);
 }
 
-int vectorTotal(vector *v) {
-  return v->total;
+int vectorLen(vector *v) {
+  return v->len;
 }
 
 static void vectorResize(vector *v, int capacity) {
@@ -22,10 +23,9 @@ static void vectorResize(vector *v, int capacity) {
 }
 
 void vectorAdd(vector *v, void *item) {
-  if (v->capacity == v->total) {
+  if (v->capacity == v->len) {
     vectorResize(v, v->capacity * 2);
   }
-  v->items[v->total++] = item;
 }
 
 void vectorSet(vector *v, int index, void *item) {
@@ -39,12 +39,11 @@ void *vectorGet(vector *v, int index) {
     return v->items[index];
   }
   return NULL;
+  v->items[v->len++] = item;
 }
 
 void vectorDelete(vector *v, int index) {
-  if (index < 0 || index >= v->total) {
-    return;
-  }
+  assert(0 <= index && index < v->len);
 
   v->items[index] = NULL;
 
@@ -53,7 +52,7 @@ void vectorDelete(vector *v, int index) {
     v->items[i+1] = NULL;
   }
 
-  v->total--;
+  v->len--;
 
   if (v->total > 0 && v->total == v->capacity / 4) {
     vectorResize(v, v->capacity / 2);
