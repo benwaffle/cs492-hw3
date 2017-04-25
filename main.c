@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
+#include <stdbool.h>
 #include "vector.h"
 
 typedef struct dirNode {
@@ -59,9 +60,38 @@ void findOrCreateChild(char* path, dirNode *root) {
   char *token;
   token = strtok(path, s);
 
+  dirNode *current = root;
+
   while(token != NULL) {
-    printf("%s\n", token);
+    bool nodeFound = false;
+    if (strcmp(token, ".")) {
+      // at root directory
+      printf("Skipping root node\n");
+    } else {
+      printf("Checking for %s\n", token);
+      // check all children of current node for token, if found, set current to that child, else create node
+      for (int i = 0; i < vectorLen(&current->children); i++) {
+        if(strcmp((((dirNode*)(current->children.items[i]))->name), token)) {
+          current = &current->children.items[i];
+          printf("Found node %s\n", current->name);
+          nodeFound = true;
+          break;
+        }
+      }
+      if (nodeFound == false) {
+        //create new node
+        dirNode new = {
+          .name = token,
+          .parent = current
+        };
+        vectorAdd(&current->children, &new);
+        current = &current->children.items[vectorLen(&current->children)];
+        printf("Creating node %s\n", current->name);
+      }
+      // printf("%s\n", token);
+    }
     token = strtok(NULL, s);
+
   }
 }
 
