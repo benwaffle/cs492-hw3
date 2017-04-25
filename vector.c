@@ -1,5 +1,5 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include "vector.h"
@@ -34,14 +34,11 @@ void vectorDelete(vector *v, int index) {
 
   v->items[index] = NULL;
 
-  for (int i = 0; i < v->total - 1; i++) {
-    v->items[i] = v->items[i+1];
-    v->items[i+1] = NULL;
-  }
+  memmove(&v->items[index], &v->items[index+1], (v->len - index - 1) * sizeof(void*));
 
   v->len--;
 
-  if (v->total > 0 && v->total == v->capacity / 4) {
+  if (v->len > 0 && v->len < v->capacity / 4) {
     vectorResize(v, v->capacity / 2);
   }
 }
