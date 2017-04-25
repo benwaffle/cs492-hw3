@@ -5,7 +5,7 @@
 #include "vector.h"
 
 void vectorInit(vector *v) {
-  v->capacity = VECTOR_INIT_CAPACITY;
+  v->capacity = 10;
   v->len = 0;
   v->items = malloc(sizeof(void *) * v->capacity);
 }
