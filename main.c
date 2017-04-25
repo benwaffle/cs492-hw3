@@ -60,7 +60,7 @@ void findOrCreateChild(char* path, dirNode *root) {
   token = strtok(path, s);
 
   while(token != NULL) {
-    printf( "%s\n", token );
+    printf("%s\n", token);
     token = strtok(NULL, s);
   }
 }
