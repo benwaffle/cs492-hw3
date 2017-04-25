@@ -9,7 +9,5 @@ typedef struct {
 void vectorInit(vector*);
 int vectorLen(vector*);
 void vectorAdd(vector*, void*);
-void vectorSet(vector*, int, void*);
-void *vectorGet(vector*, int);
 void vectorDelete(vector*, int);
 void vectorFree(vector*);
