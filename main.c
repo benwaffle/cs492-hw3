@@ -93,7 +93,7 @@ void mkdir(const char *path, dirNode *root) {
     mkdir(delimLoc + 1, new);
 
     free(part);
-  } else { // no slash, create dir node
+  } else if (strcmp(path, ".") != 0) { // no slash, so create dir node, don't create `.' nodes
     dirNode *new = newDirNode(strdup(path), root);
     vectorAdd(&root->children, new);
   }
