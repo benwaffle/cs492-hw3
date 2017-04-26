@@ -25,6 +25,14 @@ char *mkstring(char *fmt, ...) {
   return res;
 }
 
+dirNode *newDirNode(char *name, dirNode *parent) {
+  dirNode *new = malloc(sizeof(dirNode));
+  new->name = name;
+  new->parent = parent;
+  vectorInit(&new->children);
+  return new;
+}
+
 void parseFileList(FILE* file) {
   int ret, size, day;
   char filePath[100000];
@@ -56,56 +64,57 @@ void parseFileList(FILE* file) {
   }
 }
 
-void findOrCreateChild(char* path, dirNode *root) {
-  const char s[2] = "/";
-  char *token;
-  token = strtok(path, s);
+void mkdir(const char *path, dirNode *root) {
+  char *delimLoc = strchr(path, '/');
 
-  dirNode *current = root;
+  if (delimLoc) { // slash in path
+    int partLen = delimLoc - path; // length of the current part of the path
+    char *part = strndup(path, partLen); // the current part of the path
 
-  while(token != NULL) {
-    bool nodeFound = false;
-    if (strcmp(token, ".")) {
-      // at root directory
-      printf("Skipping root node\n");
-    } else {
-      printf("Checking for %s\n", token);
-      // check all children of current node for token, if found, set current to that child, else create node
-      for (int i = 0; i < vectorLen(&current->children); i++) {
-        if(strcmp((((dirNode*)(current->children.items[i]))->name), token)) {
-          current = &current->children.items[i];
-          printf("Found node %s\n", current->name);
-          nodeFound = true;
-          break;
-        }
-      }
-      if (nodeFound == false) {
-        //create new node
-        dirNode new = {
-          .name = token,
-          .parent = current
-        };
-        vectorAdd(&current->children, &new);
-        current = &new;
-        printf("Creating node %s\n", current->name);
-      }
-      // printf("%s\n", token);
+    if (strcmp(part, ".") == 0) { // basically ignore `.'
+      mkdir(delimLoc + 1, root);
+      free(part);
+      return;
     }
-    token = strtok(NULL, s);
 
+    // look for directory to go into
+    for (int i = 0; i < vectorLen(&root->children); ++i) {
+      dirNode *child = root->children.items[i];
+      if (strcmp(child->name, part) == 0) {
+        mkdir(delimLoc + 1, child);
+        free(part);
+        return;
+      }
+    }
+
+    // didn't find directory, so make it
+    dirNode *new = newDirNode(part, root);
+    vectorAdd(&root->children, new);
+    mkdir(delimLoc + 1, new);
+
+    free(part);
+  } else { // no slash, create dir node
+    dirNode *new = newDirNode(strdup(path), root);
+    vectorAdd(&root->children, new);
   }
 }
 
-void parseDirectoryStructure(FILE* file) {
-  dirNode root = {
-    .name = "/",
-    .parent = NULL
-  };
-  vectorInit(&root.children);
-  int ret;
-  char str[10000];
-  while ((ret = fscanf(file, "%s\n", str)) != EOF) {
-    findOrCreateChild(str, &root);
+dirNode *parseDirs(FILE* dirs) {
+  dirNode *root = newDirNode("/", NULL);
+
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t nread;
+  while ((nread = getline(&line, &len, dirs)) != -1) {
+    if (line[nread-1] == '\n')
+      line[nread-1] = '\0';
+    mkdir(line, root);
+  }
+
+  free(line);
+  return root;
+}
+
   }
 }
 
@@ -151,8 +160,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  dirNode *root = parseDirs(dirList);
   parseFileList(fileList);
-  parseDirectoryStructure(dirList);
 
   fclose(fileList);
   fclose(dirList);
