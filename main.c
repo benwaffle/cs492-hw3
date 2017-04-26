@@ -41,7 +41,7 @@ void parseFileList(FILE* file) {
   // format: inode #blocks permissions ?? user group size month day {year or time} name
   while ((ret = fscanf(file, " %*d %*d %*s %*d %*s %*s %d %s %d %s %[^\n]\n",
           &size, month, &day, yearOrTime, filePath)) != EOF) {
-    printf("%s\n\tsize: %d\n\tdate: %s %d %s\n", filePath, size, month, day, yearOrTime);
+    //printf("%s\n\tsize: %d\n\tdate: %s %d %s\n", filePath, size, month, day, yearOrTime);
 
     char *datestr = mkstring("%s %d %s", month, day, yearOrTime);
     char *res;
@@ -59,8 +59,8 @@ void parseFileList(FILE* file) {
       struct tm *nowt = localtime(&now);
       date.tm_year = nowt->tm_year;
     }
-    printf("\tparsed date = %s\n", asctime(&date));
-    printf("\n");
+    //printf("\tparsed date = %s\n", asctime(&date));
+    //printf("\n");
   }
 }
 
@@ -115,6 +115,53 @@ dirNode *parseDirs(FILE* dirs) {
   return root;
 }
 
+vector dirNodePath(dirNode *d) {
+  vector res;
+  vectorInit(&res);
+
+  dirNode *cur = d;
+  while (cur) {
+    vectorAdd(&res, cur);
+    cur = cur->parent;
+  }
+
+  // reverse the vector
+  int len = vectorLen(&res);
+  for (int i = 0; i < len / 2; ++i) {
+    void *tmp = res.items[i];
+    res.items[i] = res.items[len - i - 1];
+    res.items[len - i - 1] = tmp;
+  }
+
+  return res;
+}
+
+void dirCmd(dirNode *root) {
+  vector queue;
+  vectorInit(&queue);
+  vectorAdd(&queue, root);
+
+  while (vectorLen(&queue) != 0) {
+    dirNode *next = queue.items[0];
+    vectorDelete(&queue, 0);
+
+    vector path = dirNodePath(next);
+    while (path.items[0] != root)
+      vectorDelete(&path, 0);
+
+    vectorDelete(&path, 0); // delete the curdir
+    printf("."); // print . for curdir
+
+    while (vectorLen(&path) != 0) {
+      printf("/%s", ((dirNode*) path.items[0])->name);
+      vectorDelete(&path, 0);
+    }
+    printf("\n");
+    vectorFree(&path);
+
+    for (int i = 0; i < vectorLen(&next->children); ++i) {
+      vectorAdd(&queue, next->children.items[i]);
+    }
   }
 }
 
@@ -161,6 +208,8 @@ int main(int argc, char *argv[]) {
   }
 
   dirNode *root = parseDirs(dirList);
+  printf("dirs:\n");
+  dirCmd(root);
   parseFileList(fileList);
 
   fclose(fileList);
