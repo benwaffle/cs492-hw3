@@ -252,14 +252,14 @@ int main(int argc, char *argv[]) {
       case 'f':
         fileList = fopen(optarg, "r");
         if (!fileList) {
-          perror("fopen");
+          perror(optarg);
           return 1;
         }
         break;
       case 'd':
         dirList = fopen(optarg, "r");
         if (!dirList) {
-          perror("fopen");
+          perror(optarg);
           return 1;
         }
         break;
