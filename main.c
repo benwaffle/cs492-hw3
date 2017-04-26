@@ -12,36 +12,50 @@
 #include <assert.h>
 #include "vector.h"
 
-typedef struct dirNode {
-  char *name;
-  struct dirNode *parent;
-  vector children;
-} dirNode;
+typedef enum {
+  DIR_NODE,
+  FILE_NODE
+} nodeType;
 
-typedef struct {
+typedef struct node {
+  nodeType type;
   char *name;
-  size_t size;
-  struct tm time;
-} fileNode;
+  union {
+    struct {
+      struct node *parent;
+      vector children;
+    }; // dir
+    struct {
+      size_t size;
+      struct tm time;
+    }; // file
+  };
+} node;
 
-dirNode *newDirNode(char *name, dirNode *parent) {
-  dirNode *new = malloc(sizeof(dirNode));
+node *newDirNode(char *name, node *parent) {
+  assert(parent == NULL || parent->type == DIR_NODE);
+  node *new = malloc(sizeof(node));
+  new->type = DIR_NODE;
   new->name = name;
   new->parent = parent;
   vectorInit(&new->children);
   return new;
 }
 
-void freeFSTree(dirNode *root) {
-  for (int i = 0; i < vectorLen(&root->children); ++i)
-    freeFSTree(root->children.items[i]);
+void freeFSTree(node *root) {
+  if (root->type == DIR_NODE) {
+    for (int i = 0; i < vectorLen(&root->children); ++i)
+      freeFSTree(root->children.items[i]);
+    vectorFree(&root->children);
+  }
 
-  vectorFree(&root->children);
   free(root->name);
   free(root);
 }
 
-void insertFileNode(dirNode *root, char *path, fileNode *file) {
+void insertFileNode(node *root, char *path, node *file) {
+  assert(root->type == DIR_NODE);
+  assert(file->type == FILE_NODE);
   char *delimLoc = strchr(path, '/');
 
   if (delimLoc) { // slash in path
@@ -56,8 +70,8 @@ void insertFileNode(dirNode *root, char *path, fileNode *file) {
 
     // look for directory to go into
     for (int i = 0; i < vectorLen(&root->children); ++i) {
-      dirNode *child = root->children.items[i];
-      if (strcmp(child->name, part) == 0) {
+      node *child = root->children.items[i];
+      if (child->type == DIR_NODE && strcmp(child->name, part) == 0) {
         insertFileNode(child, delimLoc + 1, file);
         free(part);
         return;
@@ -70,7 +84,10 @@ void insertFileNode(dirNode *root, char *path, fileNode *file) {
   }
 }
 
-void parseFileList(FILE* file, dirNode *root) {
+void parseFileList(FILE* file, node *root) {
+  assert(root->type == DIR_NODE);
+  assert(root->parent == NULL);
+
   int ret, size, day;
   char filePath[100000];
   char month[4] = {0};
@@ -97,7 +114,8 @@ void parseFileList(FILE* file, dirNode *root) {
       date.tm_year = nowt->tm_year;
     }
 
-    fileNode *file = malloc(sizeof(fileNode));
+    node *file = malloc(sizeof(node));
+    file->type = FILE_NODE;
     char *lastslash = strrchr(filePath, '/');
     assert(lastslash);
     file->name = strdup(lastslash + 1);
@@ -109,7 +127,8 @@ void parseFileList(FILE* file, dirNode *root) {
   }
 }
 
-void mkdir(const char *path, dirNode *root) {
+void mkdir(const char *path, node *root) {
+  assert(root->type == DIR_NODE);
   char *delimLoc = strchr(path, '/');
 
   if (delimLoc) { // slash in path
@@ -124,8 +143,8 @@ void mkdir(const char *path, dirNode *root) {
 
     // look for directory to go into
     for (int i = 0; i < vectorLen(&root->children); ++i) {
-      dirNode *child = root->children.items[i];
-      if (strcmp(child->name, part) == 0) {
+      node *child = root->children.items[i];
+      if (child->type == DIR_NODE && strcmp(child->name, part) == 0) {
         mkdir(delimLoc + 1, child);
         free(part);
         return;
@@ -133,19 +152,19 @@ void mkdir(const char *path, dirNode *root) {
     }
 
     // didn't find directory, so make it
-    dirNode *new = newDirNode(part, root);
+    node *new = newDirNode(part, root);
     vectorAdd(&root->children, new);
     mkdir(delimLoc + 1, new);
 
     free(part);
   } else if (strcmp(path, ".") != 0) { // no slash, so create dir node, don't create `.' nodes
-    dirNode *new = newDirNode(strdup(path), root);
+    node *new = newDirNode(strdup(path), root);
     vectorAdd(&root->children, new);
   }
 }
 
-dirNode *parseDirs(FILE* dirs) {
-  dirNode *root = newDirNode(strdup("/"), NULL);
+node *parseDirs(FILE* dirs) {
+  node *root = newDirNode(strdup("/"), NULL);
 
   char *line = NULL;
   size_t len = 0;
@@ -161,12 +180,14 @@ dirNode *parseDirs(FILE* dirs) {
 }
 
 // get path to directory as a vector of dirNode*s
-vector dirNodePath(dirNode *d) {
+vector dirNodePath(node *d) {
+  assert(d->type == DIR_NODE); // TODO: do we need to make work with files?
   vector res;
   vectorInit(&res);
 
-  dirNode *cur = d;
+  node *cur = d;
   while (cur) {
+    assert(cur->type == DIR_NODE);
     vectorAdd(&res, cur);
     cur = cur->parent;
   }
@@ -182,14 +203,18 @@ vector dirNodePath(dirNode *d) {
   return res;
 }
 
-void dirCmd(dirNode *root) {
+void dirCmd(node *root) {
+  assert(root->type == DIR_NODE);
   vector queue;
   vectorInit(&queue);
   vectorAdd(&queue, root);
 
   while (vectorLen(&queue) != 0) {
-    dirNode *next = queue.items[0];
+    node *next = queue.items[0]; // next node for BFS
     vectorDelete(&queue, 0);
+
+    if (next->type == FILE_NODE)
+      continue;
 
     vector path = dirNodePath(next);
     while (path.items[0] != root)
@@ -199,7 +224,7 @@ void dirCmd(dirNode *root) {
     printf("."); // print . for curdir
 
     while (vectorLen(&path) != 0) {
-      printf("/%s", ((dirNode*) path.items[0])->name);
+      printf("/%s", ((node*) path.items[0])->name);
       vectorDelete(&path, 0);
     }
     printf("\n");
@@ -255,7 +280,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  dirNode *root = parseDirs(dirList);
+  node *root = parseDirs(dirList);
   printf("dirs:\n");
   dirCmd(root);
   parseFileList(fileList, root);
