@@ -115,6 +115,7 @@ dirNode *parseDirs(FILE* dirs) {
   return root;
 }
 
+// get path to directory as a vector of dirNode*s
 vector dirNodePath(dirNode *d) {
   vector res;
   vectorInit(&res);
