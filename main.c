@@ -25,6 +25,15 @@ dirNode *newDirNode(char *name, dirNode *parent) {
   return new;
 }
 
+void freeFSTree(dirNode *root) {
+  for (int i = 0; i < vectorLen(&root->children); ++i)
+    freeFSTree(root->children.items[i]);
+
+  vectorFree(&root->children);
+  free(root->name);
+  free(root);
+}
+
 void parseFileList(FILE* file) {
   int ret, size, day;
   char filePath[100000];
@@ -92,7 +101,7 @@ void mkdir(const char *path, dirNode *root) {
 }
 
 dirNode *parseDirs(FILE* dirs) {
-  dirNode *root = newDirNode("/", NULL);
+  dirNode *root = newDirNode(strdup("/"), NULL);
 
   char *line = NULL;
   size_t len = 0;
@@ -156,6 +165,8 @@ void dirCmd(dirNode *root) {
       vectorAdd(&queue, next->children.items[i]);
     }
   }
+
+  vectorFree(&queue);
 }
 
 void printUsage(char *argv0) {
@@ -204,6 +215,8 @@ int main(int argc, char *argv[]) {
   printf("dirs:\n");
   dirCmd(root);
   parseFileList(fileList);
+
+  freeFSTree(root);
 
   fclose(fileList);
   fclose(dirList);
