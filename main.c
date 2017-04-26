@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <assert.h>
 #include "vector.h"
 
 typedef struct dirNode {
@@ -16,6 +17,12 @@ typedef struct dirNode {
   struct dirNode *parent;
   vector children;
 } dirNode;
+
+typedef struct {
+  char *name;
+  size_t size;
+  struct tm time;
+} fileNode;
 
 dirNode *newDirNode(char *name, dirNode *parent) {
   dirNode *new = malloc(sizeof(dirNode));
@@ -34,7 +41,36 @@ void freeFSTree(dirNode *root) {
   free(root);
 }
 
-void parseFileList(FILE* file) {
+void insertFileNode(dirNode *root, char *path, fileNode *file) {
+  char *delimLoc = strchr(path, '/');
+
+  if (delimLoc) { // slash in path
+    int partLen = delimLoc - path; // length of the current part of the path
+    char *part = strndup(path, partLen); // the current part of the path
+
+    if (strcmp(part, ".") == 0) { // basically ignore `.'
+      insertFileNode(root, delimLoc + 1, file);
+      free(part);
+      return;
+    }
+
+    // look for directory to go into
+    for (int i = 0; i < vectorLen(&root->children); ++i) {
+      dirNode *child = root->children.items[i];
+      if (strcmp(child->name, part) == 0) {
+        insertFileNode(child, delimLoc + 1, file);
+        free(part);
+        return;
+      }
+    }
+
+    assert(false && "couldn't find directory for file");
+  } else { // no slash, so insert file node
+    vectorAdd(&root->children, file);
+  }
+}
+
+void parseFileList(FILE* file, dirNode *root) {
   int ret, size, day;
   char filePath[100000];
   char month[4] = {0};
@@ -60,6 +96,14 @@ void parseFileList(FILE* file) {
       struct tm *nowt = localtime(&now);
       date.tm_year = nowt->tm_year;
     }
+
+    fileNode *file = malloc(sizeof(fileNode));
+    char *lastslash = strrchr(filePath, '/');
+    assert(lastslash);
+    file->name = strdup(lastslash + 1);
+    file->size = size;
+    file->time = date;
+    insertFileNode(root, filePath, file);
     //printf("\tparsed date = %s\n", asctime(&date));
     //printf("\n");
   }
@@ -214,7 +258,7 @@ int main(int argc, char *argv[]) {
   dirNode *root = parseDirs(dirList);
   printf("dirs:\n");
   dirCmd(root);
-  parseFileList(fileList);
+  parseFileList(fileList, root);
 
   freeFSTree(root);
 
