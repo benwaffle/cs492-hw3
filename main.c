@@ -1,5 +1,6 @@
 // vim: set et sw=2 ts=2 sts=2:
-#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE // strptime
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
