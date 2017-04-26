@@ -16,15 +16,6 @@ typedef struct dirNode {
   vector children;
 } dirNode;
 
-char *mkstring(char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  char *res;
-  vasprintf(&res, fmt, args);
-  va_end(args);
-  return res;
-}
-
 dirNode *newDirNode(char *name, dirNode *parent) {
   dirNode *new = malloc(sizeof(dirNode));
   new->name = name;
@@ -43,7 +34,8 @@ void parseFileList(FILE* file) {
           &size, month, &day, yearOrTime, filePath)) != EOF) {
     //printf("%s\n\tsize: %d\n\tdate: %s %d %s\n", filePath, size, month, day, yearOrTime);
 
-    char *datestr = mkstring("%s %d %s", month, day, yearOrTime);
+    char datestr[3 + 1 + 2 + 1 + 5 + 1];
+    sprintf(datestr, "%s %d %s", month, day, yearOrTime);
     char *res;
     struct tm date = {0};
     if (yearOrTime[2] == ':') { // time, 12:34
@@ -51,7 +43,6 @@ void parseFileList(FILE* file) {
     } else { // year 2017
       res = strptime(datestr, "%b %d %Y", &date);
     }
-    free(datestr);
     if (!res)
       perror("strptime");
     if (date.tm_year == 0) { // when we have the time, but not the year
