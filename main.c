@@ -7,6 +7,7 @@
 #include <time.h>
 #include <string.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include "vector.h"
 
 typedef struct dirNode {
@@ -108,18 +109,51 @@ void parseDirectoryStructure(FILE* file) {
   }
 }
 
+void printUsage(char *argv0) {
+  fprintf(stderr, "Usage: %s -f file_list.txt -d dir_list.txt -s <disk size> -b <block size>\n", argv0);
+}
+
 int main(int argc, char *argv[]) {
-  if (argc != 5) {
-    fprintf(stderr, "Usage %s\n"
-                    "\t<input files storing information on files>\n"
-                    "\t<input files storing information on directories>\n"
-                    "\t<disk size>\n"
-                    "\t<block size>\n",
-                argv[0]);
+  FILE *fileList = NULL, *dirList = NULL;
+  int diskSize = 0, blockSize = 0;
+
+  int opt;
+  while ((opt = getopt(argc, argv, "f:d:s:b:")) != -1) {
+    switch (opt) {
+      case 'f':
+        fileList = fopen(optarg, "r");
+        if (!fileList) {
+          perror("fopen");
+          return 1;
+        }
+        break;
+      case 'd':
+        dirList = fopen(optarg, "r");
+        if (!dirList) {
+          perror("fopen");
+          return 1;
+        }
+        break;
+      case 's':
+        diskSize = atoi(optarg);
+        break;
+      case 'b':
+        blockSize = atoi(optarg);
+        break;
+      default:
+        printUsage(argv[0]);
+        return 1;
+    }
+  }
+
+  if (!fileList || !dirList || !diskSize || !blockSize) {
+    printUsage(argv[0]);
     return 1;
   }
-  FILE *f = fopen(argv[1], "r");
-  FILE *f_directory = fopen(argv[2], "r");
-  parseFileList(f);
-  parseDirectoryStructure(f_directory);
+
+  parseFileList(fileList);
+  parseDirectoryStructure(dirList);
+
+  fclose(fileList);
+  fclose(dirList);
 }
