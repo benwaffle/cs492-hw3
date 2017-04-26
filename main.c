@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <math.h>
 #include <assert.h>
 #include "vector.h"
 
@@ -31,6 +32,13 @@ typedef struct node {
     }; // file
   };
 } node;
+
+typedef struct ldisk {
+  struct ldisk *next;
+  unsigned long blockid;
+  unsigned long nblocks;
+  bool used;
+} ldisk;
 
 node *newDirNode(char *name, node *parent) {
   assert(parent == NULL || parent->type == DIR_NODE);
@@ -84,7 +92,41 @@ void insertFileNode(node *root, char *path, node *file) {
   }
 }
 
-void parseFileList(FILE* file, node *root) {
+void allocBlocks(ldisk *disk, unsigned long size) {
+  if (size == 0)
+    return;
+
+  while (disk && disk->used)
+    disk = disk->next;
+
+  if (!disk) {
+    printf("Out of space\n");
+    return;
+  }
+
+  if (disk->nblocks <= size) { // if we can use all the blocks in this node
+    disk->used = true;
+    allocBlocks(disk->next, size - disk->nblocks);
+  } else { // only use a part of this node
+    // split nodes
+    ldisk *next = disk->next;
+    ldisk *freeBlocks = malloc(sizeof(ldisk));
+
+    // set up links
+    disk->next = freeBlocks;
+    freeBlocks->next = next;
+
+    int totalBlocks = disk->nblocks; // total # blocks before split
+    freeBlocks->blockid = disk->blockid + size;
+    freeBlocks->nblocks = totalBlocks - size;
+    disk->nblocks = size;
+
+    disk->used = true;
+    freeBlocks->used = false;
+  }
+}
+
+void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
   assert(root->type == DIR_NODE);
   assert(root->parent == NULL);
 
@@ -122,6 +164,8 @@ void parseFileList(FILE* file, node *root) {
     file->size = size;
     file->time = date;
     insertFileNode(root, filePath, file);
+    printf("%d bytes = %d blocks\n", size, (int)ceil((float)size/blockSize));
+    allocBlocks(disk, (int)ceil((float)size/blockSize));
     //printf("\tparsed date = %s\n", asctime(&date));
     //printf("\n");
   }
@@ -244,7 +288,8 @@ void printUsage(char *argv0) {
 
 int main(int argc, char *argv[]) {
   FILE *fileList = NULL, *dirList = NULL;
-  int diskSize = 0, blockSize = 0;
+  unsigned long diskSize = 0;
+  unsigned blockSize = 0;
 
   int opt;
   while ((opt = getopt(argc, argv, "f:d:s:b:")) != -1) {
@@ -264,10 +309,10 @@ int main(int argc, char *argv[]) {
         }
         break;
       case 's':
-        diskSize = atoi(optarg);
+        diskSize = strtoul(optarg, NULL, 0);
         break;
       case 'b':
-        blockSize = atoi(optarg);
+        blockSize = strtoul(optarg, NULL, 0);
         break;
       default:
         printUsage(argv[0]);
@@ -280,10 +325,22 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // initial Ldisk
+  ldisk disk = {
+    .next = NULL,
+    .blockid = 0,
+    .nblocks = diskSize / blockSize,
+    .used = false
+  };
+
+  printf("disk size = %lu, block size = %u, nblocks = %lu\n", diskSize, blockSize, disk.nblocks);
+
+  // create dirs in tree
   node *root = parseDirs(dirList);
   printf("dirs:\n");
   dirCmd(root);
-  parseFileList(fileList, root);
+  // create files in tree
+  parseFileList(fileList, root, &disk, blockSize);
 
   freeFSTree(root);
 
