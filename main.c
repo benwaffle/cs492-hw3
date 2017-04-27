@@ -185,6 +185,20 @@ lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
   }
 }
 
+void ldiskMerge(ldisk *disk) {
+  while (disk->next != NULL) {
+    if (disk->used == disk->next->used) { // merge
+      ldisk *newnext = disk->next->next;
+      disk->nblocks += disk->next->nblocks;
+      free(disk->next);
+      disk->next = newnext;
+      // don't go to next in this branch in case we need to merge again
+    } else { // next
+      disk = disk->next;
+    }
+  }
+}
+
 void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
   assert(root->type == DIR_NODE);
   assert(root->parent == NULL);
@@ -224,6 +238,7 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
     file->size = size;
     file->time = date;
     file->blocks = allocBlocks(disk, size, blockSize);
+    ldiskMerge(disk);
     insertFileNode(root, filePath, file);
     //printf("\tparsed date = %s\n", asctime(&date));
     //printf("\n");
