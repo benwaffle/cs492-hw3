@@ -86,7 +86,7 @@ void insertFileNode(node *root, char *path, node *file) {
       }
     }
 
-    assert(false && "couldn't find directory for file");
+    assert(false && "Couldn't find directory for file. Were your file_list.txt and dir_list.txt generated together?");
   } else { // no slash, so insert file node
     vectorAdd(&root->children, file);
   }
