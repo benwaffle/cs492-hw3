@@ -286,6 +286,15 @@ void printUsage(char *argv0) {
   fprintf(stderr, "Usage: %s -f file_list.txt -d dir_list.txt -s <disk size> -b <block size>\n", argv0);
 }
 
+void ls(node *dir) {
+  assert(dir->type == DIR_NODE);
+  printf("Currently in: %s\n", dir->name);
+  printf("Children: %i\n", vectorLen(&dir->children));
+  for (int i = 0; i < vectorLen(&dir->children); ++i) {
+    printf("%s\n", ((node*) dir->children.items[i])->name);
+  }
+}
+
 int main(int argc, char *argv[]) {
   FILE *fileList = NULL, *dirList = NULL;
   unsigned long diskSize = 0;
@@ -346,4 +355,6 @@ int main(int argc, char *argv[]) {
 
   fclose(fileList);
   fclose(dirList);
+
+  ls(root);
 }
