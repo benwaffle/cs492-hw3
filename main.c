@@ -306,6 +306,39 @@ vector dirNodePath(node *d) {
   return res;
 }
 
+unsigned long fragmentation(node *root, int blockSize) {
+  if (root->type == FILE_NODE) {
+    lfile *last = root->blocks;
+    if (!last) // empty file
+      return 0;
+    while (last->next != NULL)
+      last = last->next;
+    return blockSize - last->bytesUsed;
+  } else {
+    unsigned long sum = 0;
+    for (int i = 0; i < vectorLen(&root->children); ++i) {
+      sum += fragmentation(root->children.items[i], blockSize);
+    }
+    return sum;
+  }
+}
+
+void printBlocks(ldisk *disk) {
+  while (disk != NULL) {
+    printf("%s: %lu-%lu\n",
+        disk->used ? "In use" : "Free",
+        disk->blockid,
+        disk->blockid + disk->nblocks - 1);
+
+    disk = disk->next;
+  }
+}
+
+void prdiskCmd(ldisk *disk, node *root, int blockSize) {
+  printBlocks(disk);
+  printf("fragmentation: %lu bytes\n", fragmentation(root, blockSize));
+}
+
 void dirCmd(node *root) {
   assert(root->type == DIR_NODE);
   vector queue;
@@ -400,6 +433,7 @@ int main(int argc, char *argv[]) {
   dirCmd(root);
   // create files in tree
   parseFileList(fileList, root, &disk, blockSize);
+  prdiskCmd(&disk, root, blockSize);
 
   freeFSTree(root);
 
