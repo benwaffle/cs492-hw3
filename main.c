@@ -27,7 +27,7 @@ typedef struct node {
       vector children;
     }; // dir
     struct {
-      size_t size;
+      unsigned long size;
       struct tm time;
     }; // file
   };
@@ -130,12 +130,13 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
   assert(root->type == DIR_NODE);
   assert(root->parent == NULL);
 
-  int ret, size, day;
+  int ret, day;
+  unsigned long size;
   char filePath[100000];
   char month[4] = {0};
   char yearOrTime[10];
   // format: inode #blocks permissions ?? user group size month day {year or time} name
-  while ((ret = fscanf(file, " %*d %*d %*s %*d %*s %*s %d %s %d %s %[^\n]\n",
+  while ((ret = fscanf(file, " %*d %*d %*s %*d %*s %*s %lu %s %d %s %[^\n]\n",
           &size, month, &day, yearOrTime, filePath)) != EOF) {
     //printf("%s\n\tsize: %d\n\tdate: %s %d %s\n", filePath, size, month, day, yearOrTime);
 
@@ -164,8 +165,8 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
     file->size = size;
     file->time = date;
     insertFileNode(root, filePath, file);
-    printf("%d bytes = %d blocks\n", size, (int)ceil((float)size/blockSize));
-    allocBlocks(disk, (int)ceil((float)size/blockSize));
+    //printf("%d bytes = %d blocks\n", size, (int)ceil((float)size/blockSize));
+    allocBlocks(disk, (unsigned long)ceil((double)size/blockSize));
     //printf("\tparsed date = %s\n", asctime(&date));
     //printf("\n");
   }
