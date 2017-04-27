@@ -13,6 +13,19 @@
 #include <assert.h>
 #include "vector.h"
 
+typedef struct ldisk {
+  struct ldisk *next;
+  unsigned long blockid;
+  unsigned long nblocks;
+  bool used;
+} ldisk;
+
+typedef struct lfile {
+  struct lfile *next;
+  unsigned long addr;
+  int bytesUsed;
+} lfile;
+
 typedef enum {
   DIR_NODE,
   FILE_NODE
@@ -27,18 +40,12 @@ typedef struct node {
       vector children;
     }; // dir
     struct {
-      size_t size;
+      unsigned long size;
       struct tm time;
+      lfile *blocks;
     }; // file
   };
 } node;
-
-typedef struct ldisk {
-  struct ldisk *next;
-  unsigned long blockid;
-  unsigned long nblocks;
-  bool used;
-} ldisk;
 
 node *newDirNode(char *name, node *parent) {
   assert(parent == NULL || parent->type == DIR_NODE);
@@ -92,22 +99,62 @@ void insertFileNode(node *root, char *path, node *file) {
   }
 }
 
-void allocBlocks(ldisk *disk, unsigned long size) {
-  if (size == 0)
-    return;
+lfile *makeLfiles(int from, int n, int blockSize, lfile **last) {
+  lfile *first = malloc(sizeof(lfile));
+  first->addr = from * blockSize;
+  first->bytesUsed = blockSize;
 
+  lfile *prev = first;
+  for (int i = 1; i < n; ++i){
+    // one lfile node per block used
+    lfile *fileBlock = malloc(sizeof(lfile));
+    fileBlock->addr = (from + i) * blockSize;
+    fileBlock->bytesUsed = blockSize;
+    fileBlock->next = NULL;
+    prev->next = fileBlock;
+    prev = fileBlock;
+  }
+
+  if (last)
+    *last = prev;
+
+  return first;
+}
+
+lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
+  if (size == 0)
+    return NULL;
+
+  // skip used blocks
   while (disk && disk->used)
     disk = disk->next;
 
   if (!disk) {
-    printf("Out of space\n");
-    return;
+    printf("Out of space\n"); // TODO handle errors
+    return NULL;
   }
 
-  if (disk->nblocks <= size) { // if we can use all the blocks in this node
+  unsigned long blocksNeeded = size / blockSize;
+  if (size % blockSize != 0)
+    blocksNeeded++;
+
+  if (blocksNeeded >= disk->nblocks) { // if we can use all the blocks in this node
     disk->used = true;
-    allocBlocks(disk->next, size - disk->nblocks);
+
+    lfile *last;
+    lfile *list = makeLfiles(disk->blockid, disk->nblocks, blockSize, &last);
+
+    last->next = allocBlocks(disk->next, size - disk->nblocks * blockSize, blockSize);
+
+    return list;
   } else { // only use a part of this node
+    int usedNodeSize = blocksNeeded;
+    int freeNodeSize = disk->nblocks - blocksNeeded;
+
+    // don't create ldisk nodes of size 0
+    assert(usedNodeSize != 0);
+    assert(freeNodeSize != 0);
+
     // split nodes
     ldisk *next = disk->next;
     ldisk *freeBlocks = malloc(sizeof(ldisk));
@@ -116,13 +163,39 @@ void allocBlocks(ldisk *disk, unsigned long size) {
     disk->next = freeBlocks;
     freeBlocks->next = next;
 
-    int totalBlocks = disk->nblocks; // total # blocks before split
-    freeBlocks->blockid = disk->blockid + size;
-    freeBlocks->nblocks = totalBlocks - size;
-    disk->nblocks = size;
+    freeBlocks->blockid = disk->blockid + usedNodeSize;
+    freeBlocks->nblocks = freeNodeSize;
+    disk->nblocks = usedNodeSize;
 
     disk->used = true;
     freeBlocks->used = false;
+
+    if (size % blockSize != 0) { // use part of a block
+      lfile *last;
+      lfile *list = makeLfiles(disk->blockid, usedNodeSize - 1, blockSize, &last);
+      last->next = malloc(sizeof(lfile));
+      last->next->addr = (disk->blockid + disk->nblocks - 1) * blockSize;
+      last->next->bytesUsed = size % blockSize;
+      last->next->next = NULL;
+      return list;
+    } else { // use all of `used' node
+      lfile *list = makeLfiles(disk->blockid, usedNodeSize, blockSize, NULL);
+      return list;
+    }
+  }
+}
+
+void ldiskMerge(ldisk *disk) {
+  while (disk->next != NULL) {
+    if (disk->used == disk->next->used) { // merge
+      ldisk *newnext = disk->next->next;
+      disk->nblocks += disk->next->nblocks;
+      free(disk->next);
+      disk->next = newnext;
+      // don't go to next in this branch in case we need to merge again
+    } else { // next
+      disk = disk->next;
+    }
   }
 }
 
@@ -130,12 +203,13 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
   assert(root->type == DIR_NODE);
   assert(root->parent == NULL);
 
-  int ret, size, day;
+  int ret, day;
+  unsigned long size;
   char filePath[100000];
   char month[4] = {0};
   char yearOrTime[10];
   // format: inode #blocks permissions ?? user group size month day {year or time} name
-  while ((ret = fscanf(file, " %*d %*d %*s %*d %*s %*s %d %s %d %s %[^\n]\n",
+  while ((ret = fscanf(file, " %*d %*d %*s %*d %*s %*s %lu %s %d %s %[^\n]\n",
           &size, month, &day, yearOrTime, filePath)) != EOF) {
     //printf("%s\n\tsize: %d\n\tdate: %s %d %s\n", filePath, size, month, day, yearOrTime);
 
@@ -163,9 +237,9 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
     file->name = strdup(lastslash + 1);
     file->size = size;
     file->time = date;
+    file->blocks = allocBlocks(disk, size, blockSize);
+    ldiskMerge(disk);
     insertFileNode(root, filePath, file);
-    printf("%d bytes = %d blocks\n", size, (int)ceil((float)size/blockSize));
-    allocBlocks(disk, (int)ceil((float)size/blockSize));
     //printf("\tparsed date = %s\n", asctime(&date));
     //printf("\n");
   }
@@ -245,6 +319,39 @@ vector dirNodePath(node *d) {
   }
 
   return res;
+}
+
+unsigned long fragmentation(node *root, int blockSize) {
+  if (root->type == FILE_NODE) {
+    lfile *last = root->blocks;
+    if (!last) // empty file
+      return 0;
+    while (last->next != NULL)
+      last = last->next;
+    return blockSize - last->bytesUsed;
+  } else {
+    unsigned long sum = 0;
+    for (int i = 0; i < vectorLen(&root->children); ++i) {
+      sum += fragmentation(root->children.items[i], blockSize);
+    }
+    return sum;
+  }
+}
+
+void printBlocks(ldisk *disk) {
+  while (disk != NULL) {
+    printf("%s: %lu-%lu\n",
+        disk->used ? "In use" : "Free",
+        disk->blockid,
+        disk->blockid + disk->nblocks - 1);
+
+    disk = disk->next;
+  }
+}
+
+void prdiskCmd(ldisk *disk, node *root, int blockSize) {
+  printBlocks(disk);
+  printf("fragmentation: %lu bytes\n", fragmentation(root, blockSize));
 }
 
 void dirCmd(node *root) {
@@ -350,6 +457,7 @@ int main(int argc, char *argv[]) {
   dirCmd(root);
   // create files in tree
   parseFileList(fileList, root, &disk, blockSize);
+  prdiskCmd(&disk, root, blockSize);
 
   freeFSTree(root);
 
