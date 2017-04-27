@@ -13,6 +13,19 @@
 #include <assert.h>
 #include "vector.h"
 
+typedef struct ldisk {
+  struct ldisk *next;
+  unsigned long blockid;
+  unsigned long nblocks;
+  bool used;
+} ldisk;
+
+typedef struct lfile {
+  struct lfile *next;
+  unsigned long addr;
+  int bytesUsed;
+} lfile;
+
 typedef enum {
   DIR_NODE,
   FILE_NODE
@@ -29,16 +42,10 @@ typedef struct node {
     struct {
       unsigned long size;
       struct tm time;
+      lfile *blocks;
     }; // file
   };
 } node;
-
-typedef struct ldisk {
-  struct ldisk *next;
-  unsigned long blockid;
-  unsigned long nblocks;
-  bool used;
-} ldisk;
 
 node *newDirNode(char *name, node *parent) {
   assert(parent == NULL || parent->type == DIR_NODE);
@@ -92,22 +99,62 @@ void insertFileNode(node *root, char *path, node *file) {
   }
 }
 
-void allocBlocks(ldisk *disk, unsigned long size) {
-  if (size == 0)
-    return;
+lfile *makeLfiles(int from, int n, int blockSize, lfile **last) {
+  lfile *first = malloc(sizeof(lfile));
+  first->addr = from * blockSize;
+  first->bytesUsed = blockSize;
 
+  lfile *prev = first;
+  for (int i = 1; i < n; ++i){
+    // one lfile node per block used
+    lfile *fileBlock = malloc(sizeof(lfile));
+    fileBlock->addr = (from + i) * blockSize;
+    fileBlock->bytesUsed = blockSize;
+    fileBlock->next = NULL;
+    prev->next = fileBlock;
+    prev = fileBlock;
+  }
+
+  if (last)
+    *last = prev;
+
+  return first;
+}
+
+lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
+  if (size == 0)
+    return NULL;
+
+  // skip used blocks
   while (disk && disk->used)
     disk = disk->next;
 
   if (!disk) {
-    printf("Out of space\n");
-    return;
+    printf("Out of space\n"); // TODO handle errors
+    return NULL;
   }
 
-  if (disk->nblocks <= size) { // if we can use all the blocks in this node
+  unsigned long blocksNeeded = size / blockSize;
+  if (size % blockSize != 0)
+    blocksNeeded++;
+
+  if (blocksNeeded >= disk->nblocks) { // if we can use all the blocks in this node
     disk->used = true;
-    allocBlocks(disk->next, size - disk->nblocks);
+
+    lfile *last;
+    lfile *list = makeLfiles(disk->blockid, disk->nblocks, blockSize, &last);
+
+    last->next = allocBlocks(disk->next, size - disk->nblocks * blockSize, blockSize);
+
+    return list;
   } else { // only use a part of this node
+    int usedNodeSize = blocksNeeded;
+    int freeNodeSize = disk->nblocks - blocksNeeded;
+
+    // don't create ldisk nodes of size 0
+    assert(usedNodeSize != 0);
+    assert(freeNodeSize != 0);
+
     // split nodes
     ldisk *next = disk->next;
     ldisk *freeBlocks = malloc(sizeof(ldisk));
@@ -116,13 +163,25 @@ void allocBlocks(ldisk *disk, unsigned long size) {
     disk->next = freeBlocks;
     freeBlocks->next = next;
 
-    int totalBlocks = disk->nblocks; // total # blocks before split
-    freeBlocks->blockid = disk->blockid + size;
-    freeBlocks->nblocks = totalBlocks - size;
-    disk->nblocks = size;
+    freeBlocks->blockid = disk->blockid + usedNodeSize;
+    freeBlocks->nblocks = freeNodeSize;
+    disk->nblocks = usedNodeSize;
 
     disk->used = true;
     freeBlocks->used = false;
+
+    if (size % blockSize != 0) { // use part of a block
+      lfile *last;
+      lfile *list = makeLfiles(disk->blockid, usedNodeSize - 1, blockSize, &last);
+      last->next = malloc(sizeof(lfile));
+      last->next->addr = (disk->blockid + disk->nblocks - 1) * blockSize;
+      last->next->bytesUsed = size % blockSize;
+      last->next->next = NULL;
+      return list;
+    } else { // use all of `used' node
+      lfile *list = makeLfiles(disk->blockid, usedNodeSize, blockSize, NULL);
+      return list;
+    }
   }
 }
 
@@ -164,9 +223,8 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
     file->name = strdup(lastslash + 1);
     file->size = size;
     file->time = date;
+    file->blocks = allocBlocks(disk, size, blockSize);
     insertFileNode(root, filePath, file);
-    //printf("%d bytes = %d blocks\n", size, (int)ceil((float)size/blockSize));
-    allocBlocks(disk, (unsigned long)ceil((double)size/blockSize));
     //printf("\tparsed date = %s\n", asctime(&date));
     //printf("\n");
   }
