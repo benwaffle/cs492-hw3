@@ -419,17 +419,42 @@ void lsCmd(node *dir) {
   }
 }
 
-node* cdCmd(char* dir, node *root) {
-  if (dir[0]=='/') {
-    printf("You want an absolute path...\n");
-  } else {
-    for (int i = 0; i < vectorLen(&root->children); ++i) {
-      node* child = root->children.items[i];
-      if(strcmp(dir, child->name) == 0) {
-        return child;
-      }
+node* findRelativeNode(char* dir, node *root, node *original) {
+  for (int i = 0; i < vectorLen(&root->children); ++i) {
+    node* child = root->children.items[i];
+    if(strcmp(dir, child->name) == 0) {
+      return child;
     }
-    printf("No directory '%s' found in %s\n", dir, root->name);
+  }
+  printf("No directory '%s' found in %s\n", dir, root->name);
+  return original;
+}
+
+node* findAbsoluteNode(char* path, node *root, node *original) {
+  char *delimLoc = strchr(path, '/');
+  if (!delimLoc) {
+    //look in current dir!!
+    return findRelativeNode(path, root, original);
+  }
+  int partLen = delimLoc - path;
+  char *part = strndup(path, partLen);
+
+  for (int i = 0; i < vectorLen(&root->children); ++i) {
+    node *child = root->children.items[i];
+    if (child->type == DIR_NODE && strcmp(child->name, part) == 0) {
+      // free(part);
+      return findAbsoluteNode(delimLoc + 1, child, original);
+    }
+  }
+  printf("No such directory...\n");
+  return root;
+}
+
+node* cdCmd(char* path, node *root) {
+  if (path[0]=='/') {
+    return findAbsoluteNode(path, root, root);
+  } else {
+    return findRelativeNode(path, root, root);
   }
   return root;
 }
@@ -492,8 +517,12 @@ int main(int argc, char *argv[]) {
   prdiskCmd(&disk, root, blockSize);
 
   node *currentDir = root;
+  printf("Current directory: %s\n", currentDir->name);
   lsCmd(currentDir);
-  currentDir = cdCmd("t", currentDir);
+  currentDir = cdCmd("/test", currentDir);
+  printf("Switched to directory: %s\n", currentDir->name);
+  currentDir = cdCmd("2", currentDir);
+  printf("Switched to directory: %s\n", currentDir->name);
 
   freeFSTree(root);
   freeLdisk(disk.next);
