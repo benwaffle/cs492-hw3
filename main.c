@@ -522,10 +522,6 @@ int main(int argc, char *argv[]) {
     size_t lenmax = 100, len = lenmax;
     int c;
 
-    if (line == NULL) {
-      return NULL;
-    }
-
     for (;;) {
       c = fgetc(stdin);
       if (c == EOF) {
@@ -538,7 +534,6 @@ int main(int argc, char *argv[]) {
 
         if (linen == NULL) {
           free(linen);
-          return NULL;
         }
         line = linen + (line - linep);
         linep = linen;
