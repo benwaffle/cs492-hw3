@@ -517,6 +517,46 @@ int main(int argc, char *argv[]) {
   prdiskCmd(&disk, root, blockSize);
 
   node *currentDir = root;
+  while(1) {
+    char* line = malloc(100), *linep = line;
+    size_t lenmax = 100, len = lenmax;
+    int c;
+
+    if (line == NULL) {
+      return NULL;
+    }
+
+    for (;;) {
+      c = fgetc(stdin);
+      if (c == EOF) {
+        break;
+      }
+
+      if (--len == 0) {
+        len = lenmax;
+        char* linen = realloc(linep, lenmax *= 2);
+
+        if (linen == NULL) {
+          free(linen);
+          return NULL;
+        }
+        line = linen + (line - linep);
+        linep = linen;
+      }
+
+      if ((*line++ = c) == '\n') {
+        break;
+      }
+    }
+    *line = '\0';
+    if (strncmp(linep, "exit", 4)==0) {
+      break;
+    }
+    if (strncmp(linep, "ls", 2)) {
+      lsCmd(currentDir);
+    }
+  }
+
   printf("Current directory: %s\n", currentDir->name);
   lsCmd(currentDir);
   currentDir = cdCmd("/test", currentDir);
