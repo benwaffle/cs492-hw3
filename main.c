@@ -57,11 +57,29 @@ node *newDirNode(char *name, node *parent) {
   return new;
 }
 
+void freeLdisk(ldisk *node) {
+  while (node != NULL) {
+    ldisk *next = node->next;
+    free(node);
+    node = next;
+  }
+}
+
+void freeLfile(lfile *node) {
+  while (node != NULL) {
+    lfile *next = node->next;
+    free(node);
+    node = next;
+  }
+}
+
 void freeFSTree(node *root) {
   if (root->type == DIR_NODE) {
     for (int i = 0; i < vectorLen(&root->children); ++i)
       freeFSTree(root->children.items[i]);
     vectorFree(&root->children);
+  } else {
+    freeLfile(root->blocks);
   }
 
   free(root->name);
@@ -478,6 +496,7 @@ int main(int argc, char *argv[]) {
   currentDir = cdCmd("t", currentDir);
 
   freeFSTree(root);
+  freeLdisk(disk.next);
 
   fclose(fileList);
   fclose(dirList);
