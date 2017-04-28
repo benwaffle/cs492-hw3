@@ -419,22 +419,18 @@ void lsCmd(node *dir) {
   }
 }
 
-node* findRelativeNode(char* dir, node *root, node *original) {
-  for (int i = 0; i < vectorLen(&root->children); ++i) {
-    node* child = root->children.items[i];
-    if(strcmp(dir, child->name) == 0) {
-      return child;
-    }
-  }
-  printf("No directory '%s' found in %s\n", dir, root->name);
-  return original;
-}
-
-node* findAbsoluteNode(char* path, node *root, node *original) {
+node* findNodeFromPath(char* path, node *root, node *original) {
   char *delimLoc = strchr(path, '/');
   if (!delimLoc) {
     //look in current dir!!
-    return findRelativeNode(path, root, original);
+    for (int i = 0; i < vectorLen(&root->children); ++i) {
+      node* child = root->children.items[i];
+      if(strcmp(path, child->name) == 0) {
+        return child;
+      }
+    }
+    printf("No directory '%s' found in %s\n", path, root->name);
+    return original;
   }
   int partLen = delimLoc - path;
   char *part = strndup(path, partLen);
@@ -443,7 +439,7 @@ node* findAbsoluteNode(char* path, node *root, node *original) {
     node *child = root->children.items[i];
     if (child->type == DIR_NODE && strcmp(child->name, part) == 0) {
       // free(part);
-      return findAbsoluteNode(delimLoc + 1, child, original);
+      return findNodeFromPath(delimLoc + 1, child, original);
     }
   }
   printf("No such directory...\n");
@@ -451,12 +447,7 @@ node* findAbsoluteNode(char* path, node *root, node *original) {
 }
 
 node* cdCmd(char* path, node *root) {
-  if (path[0]=='/') {
-    return findAbsoluteNode(path, root, root);
-  } else {
-    return findRelativeNode(path, root, root);
-  }
-  return root;
+  return findNodeFromPath(path, root, root);
 }
 
 int main(int argc, char *argv[]) {
@@ -554,9 +545,9 @@ int main(int argc, char *argv[]) {
 
   printf("Current directory: %s\n", currentDir->name);
   lsCmd(currentDir);
-  currentDir = cdCmd("/test", currentDir);
+  currentDir = cdCmd("/1", currentDir);
   printf("Switched to directory: %s\n", currentDir->name);
-  currentDir = cdCmd("2", currentDir);
+  currentDir = cdCmd("2/3", currentDir);
   printf("Switched to directory: %s\n", currentDir->name);
 
   freeFSTree(root);
