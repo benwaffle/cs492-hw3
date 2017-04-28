@@ -401,6 +401,21 @@ void lsCmd(node *dir) {
   }
 }
 
+node* cdCmd(char* dir, node *root) {
+  if (dir[0]=='/') {
+    printf("You want an absolute path...\n");
+  } else {
+    for (int i = 0; i < vectorLen(&root->children); ++i) {
+      node* child = root->children.items[i];
+      if(strcmp(dir, child->name) == 0) {
+        return child;
+      }
+    }
+    printf("No directory '%s' found in %s\n", dir, root->name);
+  }
+  return root;
+}
+
 int main(int argc, char *argv[]) {
   FILE *fileList = NULL, *dirList = NULL;
   unsigned long diskSize = 0;
@@ -460,6 +475,7 @@ int main(int argc, char *argv[]) {
 
   node *currentDir = root;
   lsCmd(currentDir);
+  currentDir = cdCmd("t", currentDir);
 
   freeFSTree(root);
 
