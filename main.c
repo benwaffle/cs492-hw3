@@ -438,7 +438,7 @@ node* findNodeFromPath(char* path, node *root, node *original) {
         return child;
       }
     }
-    printf("No directory '%s' found in %s\n", path, root->name);
+    printf("No such directory `%s'\n", path);
     return original;
   }
   int partLen = delimLoc - path;
@@ -451,7 +451,7 @@ node* findNodeFromPath(char* path, node *root, node *original) {
       return findNodeFromPath(delimLoc + 1, child, original);
     }
   }
-  printf("No such directory...\n");
+  printf("No such directory `%s'\n", part);
   free(part);
   return original;
 }
