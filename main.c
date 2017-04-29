@@ -431,6 +431,10 @@ node* findNodeFromPath(char* path, node *root, node *original) {
     for (int i = 0; i < vectorLen(&root->children); ++i) {
       node* child = root->children.items[i];
       if(strcmp(path, child->name) == 0) {
+        if (child->type == FILE_NODE) {
+          printf("`%s' is a file, cannot cd into it\n", path);
+          return original;
+        }
         return child;
       }
     }
