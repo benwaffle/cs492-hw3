@@ -450,6 +450,24 @@ node* cdCmd(char* path, node *root) {
   return findNodeFromPath(path, root, root);
 }
 
+void printDirPath(node *dir) {
+  assert(dir->type == DIR_NODE);
+
+  // special case root dir
+  if (dir->parent == NULL) {
+    printf("/");
+    return;
+  }
+
+  vector path = dirNodePath(dir);
+  vectorDelete(&path, 0);
+  while (vectorLen(&path) != 0) {
+    printf("/%s", ((node*) path.items[0])->name);
+    vectorDelete(&path, 0);
+  }
+  vectorFree(&path);
+}
+
 int main(int argc, char *argv[]) {
   FILE *fileList = NULL, *dirList = NULL;
   unsigned long diskSize = 0;
@@ -508,7 +526,8 @@ int main(int argc, char *argv[]) {
   size_t len = 0;
   ssize_t nread;
 
-  printf("%s > ", currentDir->name);
+  printDirPath(currentDir);
+  printf(" > ");
 
   while ((nread = getline(&command, &len, stdin)) != -1) {
     if (command[nread-1] == '\n')
@@ -520,7 +539,8 @@ int main(int argc, char *argv[]) {
       lsCmd(currentDir);
     }
 
-    printf("%s > ", currentDir->name);
+    printDirPath(currentDir);
+    printf(" > ");
   }
   free(command);
 
