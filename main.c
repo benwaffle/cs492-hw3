@@ -537,6 +537,8 @@ int main(int argc, char *argv[]) {
       break;
     } else if (strcmp(command, "ls") == 0) {
       lsCmd(currentDir);
+    } else if (strncmp(command, "cd ", 3) == 0) {
+      currentDir = cdCmd(command + 3, currentDir);
     }
 
     printDirPath(currentDir);
