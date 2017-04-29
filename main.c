@@ -452,7 +452,7 @@ node* findNodeFromPath(char* path, node *root, node *original) {
     }
   }
   printf("No such directory...\n");
-  return root;
+  return original;
 }
 
 node* cdCmd(char* path, node *curdir) {
