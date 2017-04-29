@@ -545,6 +545,8 @@ int main(int argc, char *argv[]) {
         currentDir = currentDir->parent;
     } else if (strcmp(command, "dir") == 0) {
       dirCmd(currentDir);
+    } else if (strncmp(command, "mkdir ", 6) == 0) {
+      mkdir(command + 6, currentDir);
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
     } else {
