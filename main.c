@@ -547,6 +547,15 @@ int main(int argc, char *argv[]) {
       dirCmd(currentDir);
     } else if (strncmp(command, "mkdir ", 6) == 0) {
       mkdir(command + 6, currentDir);
+    } else if (strncmp(command, "create ", 7) == 0) {
+      node *file = malloc(sizeof(node));
+      file->type = FILE_NODE;
+      file->size = 0;
+      file->name = strdup(command + 7);
+      time_t now = time(NULL);
+      file->time = *localtime(&now);
+      file->blocks = NULL;
+      insertFileNode(currentDir, command + 7, file);
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
     } else {
