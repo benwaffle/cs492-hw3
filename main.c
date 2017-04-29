@@ -540,6 +540,8 @@ int main(int argc, char *argv[]) {
       lsCmd(currentDir);
     } else if (strncmp(command, "cd ", 3) == 0) {
       currentDir = cdCmd(command + 3, currentDir);
+    } else if (strcmp(command, "dir") == 0) {
+      dirCmd(currentDir);
     } else {
       printf("Unknown command `%s'\n", command);
     }
