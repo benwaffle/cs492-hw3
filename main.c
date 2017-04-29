@@ -447,11 +447,12 @@ node* findNodeFromPath(char* path, node *root, node *original) {
   for (int i = 0; i < vectorLen(&root->children); ++i) {
     node *child = root->children.items[i];
     if (child->type == DIR_NODE && strcmp(child->name, part) == 0) {
-      // free(part);
+      free(part);
       return findNodeFromPath(delimLoc + 1, child, original);
     }
   }
   printf("No such directory...\n");
+  free(part);
   return original;
 }
 
