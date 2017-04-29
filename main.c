@@ -540,6 +540,9 @@ int main(int argc, char *argv[]) {
       lsCmd(currentDir);
     } else if (strncmp(command, "cd ", 3) == 0) {
       currentDir = cdCmd(command + 3, currentDir);
+    } else if (strcmp(command, "cd..") == 0) {
+      if (currentDir->parent)
+        currentDir = currentDir->parent;
     } else if (strcmp(command, "dir") == 0) {
       dirCmd(currentDir);
     } else if (strcmp(command, "prdisk") == 0) {
@@ -547,6 +550,9 @@ int main(int argc, char *argv[]) {
     } else {
       printf("Unknown command `%s'\n", command);
     }
+
+    // we may have changed currentDir above
+    assert(currentDir->type == DIR_NODE);
 
     printDirPath(currentDir);
     printf(" > ");
