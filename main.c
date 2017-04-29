@@ -507,41 +507,27 @@ int main(int argc, char *argv[]) {
   parseFileList(fileList, root, &disk, blockSize);
   prdiskCmd(&disk, root, blockSize);
 
+  // input loop
   node *currentDir = root;
-  while(1) {
-    char* line = malloc(100), *linep = line;
-    size_t lenmax = 100, len = lenmax;
-    int c;
+  char *command = NULL;
+  size_t len = 0;
+  ssize_t nread;
 
-    for (;;) {
-      c = fgetc(stdin);
-      if (c == EOF) {
-        break;
-      }
+  printf("%s > ", currentDir->name);
 
-      if (--len == 0) {
-        len = lenmax;
-        char* linen = realloc(linep, lenmax *= 2);
+  while ((nread = getline(&command, &len, stdin)) != -1) {
+    if (command[nread-1] == '\n')
+      command[nread-1] = '\0';
 
-        if (linen == NULL) {
-          free(linen);
-        }
-        line = linen + (line - linep);
-        linep = linen;
-      }
-
-      if ((*line++ = c) == '\n') {
-        break;
-      }
-    }
-    *line = '\0';
-    if (strncmp(linep, "exit", 4)==0) {
+    if (strcmp(command, "exit") == 0) {
       break;
-    }
-    if (strncmp(linep, "ls", 2)) {
+    } else if (strcmp(command, "ls") == 0) {
       lsCmd(currentDir);
     }
+
+    printf("%s > ", currentDir->name);
   }
+  free(command);
 
   printf("Current directory: %s\n", currentDir->name);
   lsCmd(currentDir);
