@@ -455,8 +455,8 @@ node* findNodeFromPath(char* path, node *root, node *original) {
   return root;
 }
 
-node* cdCmd(char* path, node *root) {
-  return findNodeFromPath(path, root, root);
+node* cdCmd(char* path, node *curdir) {
+  return findNodeFromPath(path, curdir, curdir);
 }
 
 void printDirPath(node *dir) {
