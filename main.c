@@ -497,15 +497,10 @@ int main(int argc, char *argv[]) {
     .used = false
   };
 
-  printf("disk size = %lu, block size = %u, nblocks = %lu\n", diskSize, blockSize, disk.nblocks);
-
   // create dirs in tree
   node *root = parseDirs(dirList);
-  printf("dirs:\n");
-  dirCmd(root);
   // create files in tree
   parseFileList(fileList, root, &disk, blockSize);
-  prdiskCmd(&disk, root, blockSize);
 
   // input loop
   node *currentDir = root;
@@ -528,13 +523,6 @@ int main(int argc, char *argv[]) {
     printf("%s > ", currentDir->name);
   }
   free(command);
-
-  printf("Current directory: %s\n", currentDir->name);
-  lsCmd(currentDir);
-  currentDir = cdCmd("/1", currentDir);
-  printf("Switched to directory: %s\n", currentDir->name);
-  currentDir = cdCmd("2/3", currentDir);
-  printf("Switched to directory: %s\n", currentDir->name);
 
   freeFSTree(root);
   freeLdisk(disk.next);
