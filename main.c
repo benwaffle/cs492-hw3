@@ -419,6 +419,11 @@ void lsCmd(node *dir) {
   }
 }
 
+/**
+ * path - the path to follow
+ * root - the current directory
+ * original - the original current directory to return in case of error
+ */
 node* findNodeFromPath(char* path, node *root, node *original) {
   char *delimLoc = strchr(path, '/');
   if (!delimLoc) {
