@@ -534,6 +534,7 @@ int main(int argc, char *argv[]) {
       command[nread-1] = '\0';
 
     if (strcmp(command, "exit") == 0) {
+      printf("bye bye\n");
       break;
     } else if (strcmp(command, "ls") == 0) {
       lsCmd(currentDir);
