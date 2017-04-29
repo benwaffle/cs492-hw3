@@ -542,6 +542,8 @@ int main(int argc, char *argv[]) {
       currentDir = cdCmd(command + 3, currentDir);
     } else if (strcmp(command, "dir") == 0) {
       dirCmd(currentDir);
+    } else if (strcmp(command, "prdisk") == 0) {
+      prdiskCmd(&disk, root, blockSize);
     } else {
       printf("Unknown command `%s'\n", command);
     }
