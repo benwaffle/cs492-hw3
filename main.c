@@ -460,6 +460,17 @@ node* cdCmd(char* path, node *curdir) {
   return findNodeFromPath(path, curdir, curdir);
 }
 
+void createCmd(char *path, node *curdir) {
+  node *file = malloc(sizeof(node));
+  file->type = FILE_NODE;
+  file->size = 0;
+  file->name = strdup(path);
+  time_t now = time(NULL);
+  file->time = *localtime(&now);
+  file->blocks = NULL;
+  insertFileNode(curdir, path, file);
+}
+
 void printDirPath(node *dir) {
   assert(dir->type == DIR_NODE);
 
@@ -558,14 +569,7 @@ int main(int argc, char *argv[]) {
     } else if (strncmp(command, "mkdir ", 6) == 0) {
       mkdir(command + 6, currentDir);
     } else if (strncmp(command, "create ", 7) == 0) {
-      node *file = malloc(sizeof(node));
-      file->type = FILE_NODE;
-      file->size = 0;
-      file->name = strdup(command + 7);
-      time_t now = time(NULL);
-      file->time = *localtime(&now);
-      file->blocks = NULL;
-      insertFileNode(currentDir, command + 7, file);
+      createCmd(command + 7, currentDir);
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
     } else {
