@@ -11,7 +11,11 @@
 #include <unistd.h>
 #include <math.h>
 #include <assert.h>
+#include <locale.h>
 #include "vector.h"
+
+#define POINTER_TO_INT(x) ((int)(long)(x))
+#define INT_TO_POINTER(x) ((void*)(long)(x))
 
 typedef struct ldisk {
   struct ldisk *next;
@@ -275,8 +279,6 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
     file->blocks = allocBlocks(disk, size, blockSize);
     ldiskMerge(disk);
     insertFileNode(root, filePath, file);
-    //printf("\tparsed date = %s\n", asctime(&date));
-    //printf("\n");
   }
 }
 
@@ -384,9 +386,77 @@ void printBlocks(ldisk *disk) {
   }
 }
 
+void printDirPath(node *dir) {
+  assert(dir->type == DIR_NODE);
+
+  vector path = dirNodePath(dir);
+  // delete root dir, it causes an extra /
+  vectorDelete(&path, 0);
+  while (vectorLen(&path) != 0) {
+    printf("/%s", ((node*) path.items[0])->name);
+    vectorDelete(&path, 0);
+  }
+  vectorFree(&path);
+  printf("/");
+}
+
 void prdiskCmd(ldisk *disk, node *root, int blockSize) {
   printBlocks(disk);
   printf("fragmentation: %lu bytes\n", fragmentation(root, blockSize));
+}
+
+void prfilesShow(node *file, unsigned long blockSize) {
+  assert(file->type == FILE_NODE);
+  printDirPath(file->parent);
+  printf("%s:\n", file->name);
+  printf("\tsize = %lu\n", file->size);
+
+  char timestr[100] = {0};
+  strftime(timestr, sizeof(timestr)-1, "%c", &file->time);
+  printf("\ttime = %s\n", timestr);
+
+  printf("\tblocks = ");
+  if (file->blocks) {
+    vector blocks;
+    vectorInit(&blocks);
+    for (lfile *block = file->blocks;
+         block != NULL;
+         block = block->next) {
+      vectorAdd(&blocks, INT_TO_POINTER(block->addr / blockSize));
+    }
+
+    if (vectorLen(&blocks) == 0) {
+      printf("none");
+      vectorFree(&blocks);
+    } else {
+      int from = POINTER_TO_INT(blocks.items[0]);
+      int to = from;
+      printf("[%d]", from);
+      for (int i = 1; i < vectorLen(&blocks); ++i) {
+        int next = POINTER_TO_INT(blocks.items[i]);
+        printf("[%d]", next);
+        if (next - to == 1) { // increase range
+          to = next;
+        } else {
+          printf("%d-%d,", from, to);
+          from = to = next;
+        }
+      }
+      printf("%d-%d", from, to);
+    }
+  }
+  printf("\n");
+}
+
+void prfilesCmd(node *root, unsigned long blockSize) {
+  for (int i = 0; i < vectorLen(&root->children); ++i) {
+    node *child = root->children.items[i];
+    if (child->type == DIR_NODE) {
+      prfilesCmd(child, blockSize);
+    } else {
+      prfilesShow(child, blockSize);
+    }
+  }
 }
 
 void dirCmd(node *root) {
@@ -574,25 +644,9 @@ void deleteCmd(node *file, ldisk *disk, int blockSize) {
   free(file);
 }
 
-void printDirPath(node *dir) {
-  assert(dir->type == DIR_NODE);
-
-  // special case root dir
-  if (dir->parent == NULL) {
-    printf("/");
-    return;
-  }
-
-  vector path = dirNodePath(dir);
-  vectorDelete(&path, 0);
-  while (vectorLen(&path) != 0) {
-    printf("/%s", ((node*) path.items[0])->name);
-    vectorDelete(&path, 0);
-  }
-  vectorFree(&path);
-}
-
 int main(int argc, char *argv[]) {
+  setlocale(LC_ALL, ""); // to print times correctly
+
   FILE *fileList = NULL, *dirList = NULL;
   unsigned long diskSize = 0;
   unsigned blockSize = 0;
@@ -677,6 +731,8 @@ int main(int argc, char *argv[]) {
       deleteCmd(findNodeFromPath(command + 7, currentDir, NULL), &disk, blockSize);
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
+    } else if (strcmp(command, "prfiles") == 0) {
+      prfilesCmd(root, blockSize);
     } else {
       printf("Unknown command `%s'\n", command);
     }
