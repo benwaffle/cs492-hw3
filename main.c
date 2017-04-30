@@ -35,17 +35,23 @@ typedef struct node {
   nodeType type;
   char *name;
   struct node *parent;
+  struct tm time;
   union {
     struct {
       vector children;
     }; // dir
     struct {
       unsigned long size;
-      struct tm time;
       lfile *blocks;
     }; // file
   };
 } node;
+
+struct tm now() {
+  time_t x = time(NULL);
+  struct tm *t = localtime(&x);
+  return *t;
+}
 
 node *newDirNode(char *name, node *parent) {
   assert(parent == NULL || parent->type == DIR_NODE);
@@ -53,6 +59,7 @@ node *newDirNode(char *name, node *parent) {
   new->type = DIR_NODE;
   new->name = name;
   new->parent = parent;
+  new->time = now();
   vectorInit(&new->children);
   return new;
 }
@@ -255,9 +262,7 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
     if (!res)
       perror("strptime");
     if (date.tm_year == 0) { // when we have the time, but not the year
-      time_t now = time(NULL);
-      struct tm *nowt = localtime(&now);
-      date.tm_year = nowt->tm_year;
+      date.tm_year = now().tm_year;
     }
 
     node *file = malloc(sizeof(node));
@@ -478,8 +483,7 @@ void createCmd(char *path, node *curdir) {
   file->type = FILE_NODE;
   file->size = 0;
   file->name = strdup(path);
-  time_t now = time(NULL);
-  file->time = *localtime(&now);
+  file->time = now();
   file->blocks = NULL;
   insertFileNode(curdir, path, file);
 }
@@ -563,6 +567,9 @@ void deleteCmd(node *file, ldisk *disk, int blockSize) {
   }
   assert(childIndex != -1);
   vectorDelete(&parent->children, childIndex);
+
+  if (file->type == FILE_NODE) // TODO: do we update the parent timestamp for deleted dirs?
+    parent->time = now();
 
   free(file);
 }
