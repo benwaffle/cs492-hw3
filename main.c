@@ -119,9 +119,14 @@ void insertFileNode(node *root, char *path, node *file) {
 }
 
 lfile *makeLfiles(int from, int n, int blockSize, lfile **last) {
+  if (n == 0) {
+    return NULL;
+  }
+
   lfile *first = malloc(sizeof(lfile));
   first->addr = from * blockSize;
   first->bytesUsed = blockSize;
+  first->next = NULL;
 
   lfile *prev = first;
   for (int i = 1; i < n; ++i){
@@ -190,12 +195,18 @@ lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
     freeBlocks->used = false;
 
     if (size % blockSize != 0) { // use part of a block
-      lfile *last;
+      lfile *last = NULL;
       lfile *list = makeLfiles(disk->blockid, usedNodeSize - 1, blockSize, &last);
-      last->next = malloc(sizeof(lfile));
-      last->next->addr = (disk->blockid + disk->nblocks - 1) * blockSize;
-      last->next->bytesUsed = size % blockSize;
-      last->next->next = NULL;
+      lfile *partial = malloc(sizeof(lfile));
+
+      partial->addr = (disk->blockid + disk->nblocks - 1) * blockSize;
+      assert(!last || last->addr != partial->addr);
+      partial->bytesUsed = size % blockSize;
+      partial->next = NULL;
+
+      // when we use less than 1 block, list & last are null
+      if (last)
+        last->next = partial;
       return list;
     } else { // use all of `used' node
       lfile *list = makeLfiles(disk->blockid, usedNodeSize, blockSize, NULL);
