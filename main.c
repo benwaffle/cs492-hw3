@@ -34,9 +34,9 @@ typedef enum {
 typedef struct node {
   nodeType type;
   char *name;
+  struct node *parent;
   union {
     struct {
-      struct node *parent;
       vector children;
     }; // dir
     struct {
@@ -113,6 +113,7 @@ void insertFileNode(node *root, char *path, node *file) {
 
     assert(false && "Couldn't find directory for file. Were your file_list.txt and dir_list.txt generated together?");
   } else { // no slash, so insert file node
+    file->parent = root;
     vectorAdd(&root->children, file);
   }
 }
