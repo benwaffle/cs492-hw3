@@ -539,9 +539,9 @@ void deleteCmd(node *file, ldisk *disk, int blockSize) {
   }
 
   if (file->type == DIR_NODE) {
-    // delete children
-    for (int i = 0; i < vectorLen(&file->children); ++i) {
-      deleteCmd(file->children.items[i], disk, blockSize);
+    if (vectorLen(&file->children) != 0) {
+      printf("Error: directory is not empty\n");
+      return;
     }
   } else {
     // delete lfile blocks
