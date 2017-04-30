@@ -432,14 +432,10 @@ node* findNodeFromPath(char* path, node *root, node *original) {
     for (int i = 0; i < vectorLen(&root->children); ++i) {
       node* child = root->children.items[i];
       if(strcmp(path, child->name) == 0) {
-        if (child->type == FILE_NODE) {
-          printf("`%s' is a file, cannot cd into it\n", path);
-          return original;
-        }
         return child;
       }
     }
-    printf("No such directory `%s'\n", path);
+    printf("No such file or directory `%s'\n", path);
     return original;
   }
   int partLen = delimLoc - path;
@@ -452,13 +448,18 @@ node* findNodeFromPath(char* path, node *root, node *original) {
       return findNodeFromPath(delimLoc + 1, child, original);
     }
   }
-  printf("No such directory `%s'\n", part);
+  printf("No such file or directory `%s'\n", part);
   free(part);
   return original;
 }
 
 node* cdCmd(char* path, node *curdir) {
-  return findNodeFromPath(path, curdir, curdir);
+  node *it = findNodeFromPath(path, curdir, curdir);
+  if (it->type == FILE_NODE) {
+    printf("`%s' is a file, cannot cd into it\n", it->name);
+    return curdir;
+  }
+  return it;
 }
 
 void createCmd(char *path, node *curdir) {
