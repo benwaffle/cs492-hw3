@@ -488,7 +488,7 @@ void createCmd(char *path, node *curdir) {
   insertFileNode(curdir, path, file);
 }
 
-ldisk *freeBlock(ldisk *disk, int block) {
+ldisk *freeBlock(ldisk *disk, unsigned block) {
   // find block
   while (!(disk->blockid <= block && block < disk->blockid + disk->nblocks)) {
     disk = disk->next;
