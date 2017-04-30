@@ -484,6 +484,89 @@ void createCmd(char *path, node *curdir) {
   insertFileNode(curdir, path, file);
 }
 
+ldisk *freeBlock(ldisk *disk, int block) {
+  // find block
+  while (!(disk->blockid <= block && block < disk->blockid + disk->nblocks)) {
+    disk = disk->next;
+    assert(disk);
+  }
+
+  assert(disk->used);
+
+  ldisk *oldnext = disk->next;
+  unsigned long oldnblocks = disk->nblocks;
+
+  // split into [used]->[deleted/free]->[used]
+
+  ldisk *before = disk;
+  ldisk *freeNode = malloc(sizeof(ldisk));
+  ldisk *after = malloc(sizeof(ldisk));
+
+  before->next = freeNode;
+  freeNode->next = after;
+  after->next = oldnext;
+
+  before->used = true;
+  freeNode->used = false;
+  after->used = true;
+
+  // before->blockid unchanged
+  freeNode->blockid = block;
+  after->blockid = block + 1;
+
+  before->nblocks = block - disk->blockid;
+  freeNode->nblocks = 1;
+  after->nblocks = oldnblocks - before->nblocks - freeNode->nblocks;
+
+  if (before->nblocks == 0) {
+    // get rid of before block without having to fix prev block
+    *before = *freeNode;
+    free(freeNode);
+  }
+
+  assert(after->nblocks != 0);
+
+  return before;
+}
+
+void deleteCmd(node *file, ldisk *disk, int blockSize) {
+  if (!file) {
+    return;
+  }
+
+  if (file->type == DIR_NODE) {
+    // delete children
+    for (int i = 0; i < vectorLen(&file->children); ++i) {
+      deleteCmd(file->children.items[i], disk, blockSize);
+    }
+  } else {
+    // delete lfile blocks
+    ldisk *last = disk;
+    for (lfile *block = file->blocks;
+         block != NULL;
+         block = block->next) {
+      assert(block->addr % blockSize == 0);
+      last = freeBlock(last, block->addr / blockSize);
+    }
+    ldiskMerge(disk);
+  }
+
+  // delete file/dir from fs tree
+  node *parent = file->parent;
+  assert(parent->type == DIR_NODE);
+  int childIndex = -1; // index of file in parent
+  for (int i = 0; i < vectorLen(&parent->children); ++i) {
+    if (parent->children.items[i] == file) {
+      childIndex = i;
+      break;
+    }
+  }
+  assert(childIndex != -1);
+  vectorDelete(&parent->children, childIndex);
+
+  free(file);
+}
+
 void printDirPath(node *dir) {
   assert(dir->type == DIR_NODE);
 
@@ -583,6 +666,8 @@ int main(int argc, char *argv[]) {
       mkdir(command + 6, currentDir);
     } else if (strncmp(command, "create ", 7) == 0) {
       createCmd(command + 7, currentDir);
+    } else if (strncmp(command, "delete ", 7) == 0) {
+      deleteCmd(findNodeFromPath(command + 7, currentDir, NULL), &disk, blockSize);
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
     } else {
