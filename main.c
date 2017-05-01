@@ -786,7 +786,7 @@ void deleteCmd(node *file, ldisk *disk, int blockSize) {
 void appendCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned long blockSize) {
   assert(curdir->type == DIR_NODE);
   node *file = findNodeFromPath(filename, curdir, NULL);
-  if (!file) {
+  if (!file || file->type == DIR_NODE) {
     printf("%s: no such file\n", filename);
     return;
   }
@@ -836,7 +836,7 @@ void shrinkFile(ldisk *disk, node *file, int bytes, unsigned long blockSize) {
 void removeCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned long blockSize) {
   assert(curdir->type == DIR_NODE);
   node *file = findNodeFromPath(filename, curdir, NULL);
-  if (!file) {
+  if (!file || file->type == DIR_NODE) {
     printf("%s: no such file\n", filename);
     return;
   }
@@ -948,13 +948,21 @@ int main(int argc, char *argv[]) {
     } else if (strncmp(command, "append ", 7) == 0) {
       char *args = command + 7;
       char *space = strchr(args, ' ');
-      *space = '\0';
-      appendCmd(currentDir, args, atoi(space + 1), &disk, blockSize);
+      if (!space) {
+        printf("Usage: append <filename> <bytes>\n");
+      } else {
+        *space = '\0';
+        appendCmd(currentDir, args, atoi(space + 1), &disk, blockSize);
+      }
     } else if (strncmp(command, "remove ", 7) == 0) {
       char *args = command + 7;
       char *space = strchr(args, ' ');
-      *space = '\0';
-      removeCmd(currentDir, args, atoi(space + 1), &disk, blockSize);
+      if (!space) {
+        printf("Usage: remove <filename> <bytes>\n");
+      } else {
+        *space = '\0';
+        removeCmd(currentDir, args, atoi(space + 1), &disk, blockSize);
+      }
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
     } else if (strcmp(command, "prfiles") == 0) {
