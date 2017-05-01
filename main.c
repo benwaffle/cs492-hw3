@@ -783,6 +783,7 @@ void deleteCmd(node *file, ldisk *disk, int blockSize) {
   if (file->type == DIR_NODE)
     vectorFree(&file->children);
 
+  free(file->name);
   free(file);
 }
 
