@@ -380,7 +380,7 @@ void mkdir(const char *path, node *root) {
     }
 
     // didn't find directory, so make it
-    node *new = newDirNode(part, root);
+    node *new = newDirNode(strdup(part), root);
     vectorAdd(&root->children, new);
     mkdir(delimLoc + 1, new);
 
