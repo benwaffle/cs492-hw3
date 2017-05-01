@@ -17,6 +17,10 @@
 #define POINTER_TO_INT(x) ((int)(long)(x))
 #define INT_TO_POINTER(x) ((void*)(long)(x))
 
+/*
+ * ldisk
+ * indexed linked list for disk space
+ */
 typedef struct ldisk {
   struct ldisk *next;
   unsigned long blockid;
@@ -24,6 +28,10 @@ typedef struct ldisk {
   bool used;
 } ldisk;
 
+/*
+ * lfile
+ * indexed linked list for files
+ */
 typedef struct lfile {
   struct lfile *next;
   unsigned long addr;
@@ -35,6 +43,10 @@ typedef enum {
   FILE_NODE
 } nodeType;
 
+/*
+ * node
+ * node struct for files and dirs
+ */
 typedef struct node {
   nodeType type;
   char *name;
@@ -57,6 +69,12 @@ struct tm now() {
   return *t;
 }
 
+/*
+ * newDirNode
+ * name: name of directory to create
+ * parent: node pointing to parent of new node
+ * returns new node
+ */
 node *newDirNode(char *name, node *parent) {
   assert(parent == NULL || parent->type == DIR_NODE);
   node *new = malloc(sizeof(node));
@@ -68,6 +86,11 @@ node *newDirNode(char *name, node *parent) {
   return new;
 }
 
+/*
+ * freeLdisk
+ * ldisk: disk node to free
+ * frees ldisk node and re-establishes linked list
+ */
 void freeLdisk(ldisk *node) {
   while (node != NULL) {
     ldisk *next = node->next;
@@ -76,6 +99,11 @@ void freeLdisk(ldisk *node) {
   }
 }
 
+/*
+ * freeLfile
+ * lfile: file node to free
+ * frees lfile node and re-establishes linked list
+ */
 void freeLfile(lfile *node) {
   while (node != NULL) {
     lfile *next = node->next;
@@ -84,6 +112,11 @@ void freeLfile(lfile *node) {
   }
 }
 
+/*
+ * freeFSTree
+ * root: root node of file system tree
+ * frees tree starting at given root
+ */
 void freeFSTree(node *root) {
   if (root->type == DIR_NODE) {
     for (int i = 0; i < vectorLen(&root->children); ++i)
@@ -97,6 +130,12 @@ void freeFSTree(node *root) {
   free(root);
 }
 
+/*
+ * insertFileNode
+ * root: root node of file system tree
+ * path: path to where file belongs in the structure
+ * file: file node
+ */
 void insertFileNode(node *root, char *path, node *file) {
   assert(root->type == DIR_NODE);
   assert(file->type == FILE_NODE);
@@ -129,6 +168,13 @@ void insertFileNode(node *root, char *path, node *file) {
   }
 }
 
+/*
+ * makeLfiles
+ * from: starting LFile block
+ * blockSize: blocksize for given file
+ * last: last file in current lfile
+ * returns created LFile
+ */
 lfile *makeLfiles(int from, int n, int blockSize, lfile **last) {
   if (n == 0) {
     return NULL;
@@ -156,6 +202,13 @@ lfile *makeLfiles(int from, int n, int blockSize, lfile **last) {
   return first;
 }
 
+/*
+ * allocBlocks
+ * disk: pointer to ldisk
+ * size: size of file
+ * blockSize: size per block
+ * returns lfile after proper allocation
+ */
 lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
   if (size == 0)
     return NULL;
@@ -226,6 +279,10 @@ lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
   }
 }
 
+/*
+ * ldiskMerge
+ * disk: pointer to ldisk
+ */
 void ldiskMerge(ldisk *disk) {
   while (disk->next != NULL) {
     if (disk->used == disk->next->used) { // merge
@@ -240,6 +297,14 @@ void ldiskMerge(ldisk *disk) {
   }
 }
 
+/*
+ * parseFileList
+ * file: text file with file listing
+ * node: root of file system tree
+ * disk: pointer to disk
+ * blockSize: size of blocks
+ * performs initial file system setup for individual files
+ */
 void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
   assert(root->type == DIR_NODE);
   assert(root->parent == NULL);
@@ -282,6 +347,12 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
   }
 }
 
+/*
+ * mkdir
+ * path: path to directory
+ * root: root of file system
+ * creates new directory in the file system
+ */
 void mkdir(const char *path, node *root) {
   assert(root->type == DIR_NODE);
   char *delimLoc = strchr(path, '/');
@@ -318,6 +389,11 @@ void mkdir(const char *path, node *root) {
   }
 }
 
+/*
+ * parseDirs
+ * dirs: text file of directory listings
+ * returns node pointing to newly created file system
+ */
 node *parseDirs(FILE* dirs) {
   node *root = newDirNode(strdup("/"), NULL);
 
@@ -334,7 +410,11 @@ node *parseDirs(FILE* dirs) {
   return root;
 }
 
-// get path to directory as a vector of dirNode*s
+/*
+ * dirNodePath
+ * d: directory pointer
+ * returns path to directory as a vector of dirNode*s
+ */
 vector dirNodePath(node *d) {
   assert(d->type == DIR_NODE); // TODO: do we need to make work with files?
   vector res;
@@ -358,6 +438,12 @@ vector dirNodePath(node *d) {
   return res;
 }
 
+/*
+ * fragmentation
+ * root: pointer to root node
+ * blockSize: size of blocks
+ * returns fragmentation of the given filesystem tree
+ */
 unsigned long fragmentation(node *root, int blockSize) {
   if (root->type == FILE_NODE) {
     lfile *last = root->blocks;
@@ -375,6 +461,11 @@ unsigned long fragmentation(node *root, int blockSize) {
   }
 }
 
+/*
+ * printBlocks
+ * disk: disk pointer
+ * prints block usage in given disk
+ */
 void printBlocks(ldisk *disk) {
   while (disk != NULL) {
     printf("%s: %lu-%lu\n",
@@ -386,6 +477,11 @@ void printBlocks(ldisk *disk) {
   }
 }
 
+/*
+ * printDirPath
+ * dir: directory pointer
+ * prints path to given directory node
+ */
 void printDirPath(node *dir) {
   assert(dir->type == DIR_NODE);
 
@@ -451,6 +547,12 @@ void prfilesShow(node *file, unsigned long blockSize) {
   printf("\n");
 }
 
+/*
+ * prfilesCmd
+ * root: pointer to file tree root
+ * blockSize: size of blocks
+ * prints all files in given structure and their relevant information
+ */
 void prfilesCmd(node *root, unsigned long blockSize) {
   for (int i = 0; i < vectorLen(&root->children); ++i) {
     node *child = root->children.items[i];
@@ -462,6 +564,11 @@ void prfilesCmd(node *root, unsigned long blockSize) {
   }
 }
 
+/*
+ * dirCmd
+ * root: pointer to file tree root
+ * prints directorys breadth first
+ */
 void dirCmd(node *root) {
   assert(root->type == DIR_NODE);
   vector queue;
@@ -497,6 +604,10 @@ void dirCmd(node *root) {
   vectorFree(&queue);
 }
 
+/*
+ * printUsage
+ * prints usage if improper args given
+ */
 void printUsage(char *argv0) {
   fprintf(stderr, "Usage: %s -f file_list.txt -d dir_list.txt -s <disk size> -b <block size>\n", argv0);
 }
@@ -551,6 +662,12 @@ node* cdCmd(char* path, node *curdir) {
   return it;
 }
 
+/*
+ * createCmd
+ * path: path to file to be created
+ * curdir: parent pointer
+ * creates file in the given directory
+ */
 void createCmd(char *path, node *curdir) {
   node *file = malloc(sizeof(node));
   file->type = FILE_NODE;
@@ -561,6 +678,12 @@ void createCmd(char *path, node *curdir) {
   insertFileNode(curdir, path, file);
 }
 
+/*
+ * freeBlock
+ * disk: ldisk pointer
+ * block: block ID
+ * frees relevant block
+ */
 ldisk *freeBlock(ldisk *disk, unsigned block) {
   // find block
   while (!(disk->blockid <= block && block < disk->blockid + disk->nblocks)) {
@@ -606,6 +729,13 @@ ldisk *freeBlock(ldisk *disk, unsigned block) {
   return before;
 }
 
+/*
+ * deleteCmd
+ * file: file to delete
+ * disk: ldisk pointer
+ * blockSize: size of blocks
+ * deletes given file
+ */
 void deleteCmd(node *file, ldisk *disk, int blockSize) {
   if (!file) {
     return;
