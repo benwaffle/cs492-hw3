@@ -17,6 +17,8 @@
 #define POINTER_TO_INT(x) ((int)(long)(x))
 #define INT_TO_POINTER(x) ((void*)(long)(x))
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 /*
  * ldisk
  * indexed linked list for disk space
@@ -777,6 +779,29 @@ void deleteCmd(node *file, ldisk *disk, int blockSize) {
   free(file);
 }
 
+void appendCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned long blockSize) {
+  assert(curdir->type == DIR_NODE);
+  node *file = findNodeFromPath(filename, curdir, NULL);
+  if (!file) {
+    printf("%s: no such file\n", filename);
+    return;
+  }
+  lfile *last = file->blocks;
+  if (!last) { // append to empty file
+    file->blocks = allocBlocks(disk, bytes, blockSize);
+  } else {
+    while (last->next != NULL)
+      last = last->next;
+
+    int roomInLastBlock = blockSize - last->bytesUsed;
+    int fillLastBlock = MIN(roomInLastBlock, bytes);
+    last->bytesUsed += fillLastBlock;
+    last->next = allocBlocks(disk, bytes - fillLastBlock, blockSize);
+  }
+
+  file->size += bytes;
+}
+
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, ""); // to print times correctly
 
@@ -862,6 +887,11 @@ int main(int argc, char *argv[]) {
       createCmd(command + 7, currentDir);
     } else if (strncmp(command, "delete ", 7) == 0) {
       deleteCmd(findNodeFromPath(command + 7, currentDir, NULL), &disk, blockSize);
+    } else if (strncmp(command, "append ", 7) == 0) {
+      char *args = command + 7;
+      char *space = strchr(args, ' ');
+      *space = '\0';
+      appendCmd(currentDir, args, atoi(space + 1), &disk, blockSize);
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
     } else if (strcmp(command, "prfiles") == 0) {
