@@ -218,7 +218,7 @@ lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
       // when we use less than 1 block, list & last are null
       if (last)
         last->next = partial;
-      return list;
+      return list ? list : partial;
     } else { // use all of `used' node
       lfile *list = makeLfiles(disk->blockid, usedNodeSize, blockSize, NULL);
       return list;
@@ -431,10 +431,8 @@ void prfilesShow(node *file, unsigned long blockSize) {
     } else {
       int from = POINTER_TO_INT(blocks.items[0]);
       int to = from;
-      printf("[%d]", from);
       for (int i = 1; i < vectorLen(&blocks); ++i) {
         int next = POINTER_TO_INT(blocks.items[i]);
-        printf("[%d]", next);
         if (next - to == 1) { // increase range
           to = next;
         } else {
@@ -444,6 +442,8 @@ void prfilesShow(node *file, unsigned long blockSize) {
       }
       printf("%d-%d", from, to);
     }
+  } else {
+    printf("none");
   }
   printf("\n");
 }
