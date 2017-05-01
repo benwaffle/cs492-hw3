@@ -808,6 +808,8 @@ void appendCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned lo
     last->next = allocBlocks(disk, bytes - fillLastBlock, blockSize);
   }
 
+  ldiskMerge(disk);
+
   file->size += bytes;
   file->time = now();
 }
