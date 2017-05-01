@@ -440,7 +440,10 @@ void prfilesShow(node *file, unsigned long blockSize) {
           from = to = next;
         }
       }
-      printf("%d-%d", from, to);
+      if (from != to)
+        printf("%d-%d", from, to);
+      else
+        printf("%d", from);
     }
   } else {
     printf("none");
