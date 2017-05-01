@@ -863,6 +863,8 @@ void removeCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned lo
 
   shrinkFile(disk, file, bytes, blockSize);
   file->size -= bytes;
+  if (file->size == 0)
+    file->blocks = NULL;
   file->time = now();
 }
 
