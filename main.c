@@ -780,6 +780,9 @@ void deleteCmd(node *file, ldisk *disk, int blockSize) {
   if (file->type == FILE_NODE) // TODO: do we update the parent timestamp for deleted dirs?
     parent->time = now();
 
+  if (file->type == DIR_NODE)
+    vectorFree(&file->children);
+
   free(file);
 }
 
