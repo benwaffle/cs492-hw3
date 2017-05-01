@@ -525,7 +525,6 @@ void prfilesShow(node *file, unsigned long blockSize) {
 
     if (vectorLen(&blocks) == 0) {
       printf("none");
-      vectorFree(&blocks);
     } else {
       int from = POINTER_TO_INT(blocks.items[0]);
       int to = from;
@@ -543,6 +542,7 @@ void prfilesShow(node *file, unsigned long blockSize) {
       else
         printf("%d", from);
     }
+    vectorFree(&blocks);
   } else {
     printf("none");
   }
