@@ -726,7 +726,11 @@ ldisk *freeBlock(ldisk *disk, unsigned block) {
     free(freeNode);
   }
 
-  assert(after->nblocks != 0);
+  if (after->nblocks == 0) {
+    assert(after->blockid == after->next->blockid);
+    freeNode->next = after->next;
+    free(after);
+  }
 
   return before;
 }
@@ -786,6 +790,7 @@ void appendCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned lo
     printf("%s: no such file\n", filename);
     return;
   }
+
   lfile *last = file->blocks;
   if (!last) { // append to empty file
     file->blocks = allocBlocks(disk, bytes, blockSize);
@@ -800,6 +805,59 @@ void appendCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned lo
   }
 
   file->size += bytes;
+  file->time = now();
+}
+
+void shrinkFile(ldisk *disk, node *file, int bytes, unsigned long blockSize) {
+  if (bytes == 0) {
+    return;
+  }
+
+  lfile *prev = NULL,
+        *last = file->blocks;
+  while (last->next) {
+    prev = last;
+    last = last->next;
+  }
+  if (last->bytesUsed > bytes) {
+    last->bytesUsed -= bytes;
+  } else {
+    int newsize = bytes - last->bytesUsed;
+    assert(last->addr % blockSize == 0);
+    freeBlock(disk, last->addr / blockSize);
+    ldiskMerge(disk);
+    free(last);
+    if (prev)
+      prev->next = NULL;
+    shrinkFile(disk, file, newsize, blockSize);
+  }
+}
+
+void removeCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned long blockSize) {
+  assert(curdir->type == DIR_NODE);
+  node *file = findNodeFromPath(filename, curdir, NULL);
+  if (!file) {
+    printf("%s: no such file\n", filename);
+    return;
+  }
+
+  lfile *blocks = file->blocks;
+  if (!blocks) {
+    printf("%s is an empty file\n", filename);
+    return;
+  }
+
+  if (file->size < bytes) {
+    printf("you cannot remove %d bytes from a %s (size = %lu)\n",
+        bytes,
+        filename,
+        file->size);
+    return;
+  }
+
+  shrinkFile(disk, file, bytes, blockSize);
+  file->size -= bytes;
+  file->time = now();
 }
 
 int main(int argc, char *argv[]) {
@@ -892,6 +950,11 @@ int main(int argc, char *argv[]) {
       char *space = strchr(args, ' ');
       *space = '\0';
       appendCmd(currentDir, args, atoi(space + 1), &disk, blockSize);
+    } else if (strncmp(command, "remove ", 7) == 0) {
+      char *args = command + 7;
+      char *space = strchr(args, ' ');
+      *space = '\0';
+      removeCmd(currentDir, args, atoi(space + 1), &disk, blockSize);
     } else if (strcmp(command, "prdisk") == 0) {
       prdiskCmd(&disk, root, blockSize);
     } else if (strcmp(command, "prfiles") == 0) {
