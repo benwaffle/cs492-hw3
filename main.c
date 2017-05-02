@@ -891,7 +891,7 @@ void removeCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned lo
     return;
   }
 
-  if (file->size < bytes) {
+  if (file->size < (unsigned)bytes) {
     printf("you cannot remove %d bytes from a %s (size = %lu)\n",
         bytes,
         filename,
