@@ -204,6 +204,9 @@ lfile *makeLfiles(int from, int n, int blockSize, lfile **last) {
   return first;
 }
 
+void *ALLOC_ERROR = (void*)0xdeadbeef;
+ldisk *freeBlock(ldisk *disk, unsigned block);
+
 /*
  * allocBlocks
  * disk: pointer to ldisk
@@ -221,7 +224,7 @@ lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
 
   if (!disk) {
     printf("Out of space\n"); // TODO handle errors
-    return NULL;
+    return ALLOC_ERROR;
   }
 
   unsigned long blocksNeeded = size / blockSize;
@@ -235,6 +238,18 @@ lfile *allocBlocks(ldisk *disk, unsigned long size, int blockSize) {
     lfile *list = makeLfiles(disk->blockid, disk->nblocks, blockSize, &last);
 
     last->next = allocBlocks(disk->next, size - disk->nblocks * blockSize, blockSize);
+    if (last->next == ALLOC_ERROR) {
+      for (int i = disk->nblocks - 1; i >= 0; --i) {
+        freeBlock(disk, disk->blockid + i);
+      }
+      lfile *freeme = list;
+      while (freeme != ALLOC_ERROR) { // go through list freeing blocks
+        lfile *next = freeme->next;
+        free(freeme);
+        freeme = next;
+      }
+      return ALLOC_ERROR;
+    }
 
     return list;
   } else { // only use a part of this node
@@ -345,7 +360,13 @@ void parseFileList(FILE* file, node *root, ldisk *disk, int blockSize) {
     file->time = date;
     file->blocks = allocBlocks(disk, size, blockSize);
     ldiskMerge(disk);
-    insertFileNode(root, filePath, file);
+    if (file->blocks == ALLOC_ERROR) {
+      free(file->name);
+      free(file);
+      break;
+    } else {
+      insertFileNode(root, filePath, file);
+    }
   }
 }
 
@@ -724,11 +745,15 @@ ldisk *freeBlock(ldisk *disk, unsigned block) {
     // get rid of before block without having to fix prev block
     *before = *freeNode;
     free(freeNode);
+    freeNode = NULL;
   }
 
   if (after->nblocks == 0) {
-    assert(after->blockid == after->next->blockid);
-    freeNode->next = after->next;
+    assert(!after->next || after->blockid == after->next->blockid);
+    if (freeNode)
+      freeNode->next = after->next;
+    else
+      before->next = after->next;
     free(after);
   }
 
@@ -798,17 +823,25 @@ void appendCmd(node *curdir, char *filename, int bytes, ldisk *disk, unsigned lo
   lfile *last = file->blocks;
   if (!last) { // append to empty file
     file->blocks = allocBlocks(disk, bytes, blockSize);
+    ldiskMerge(disk);
+    if (file->blocks == ALLOC_ERROR) {
+      file->blocks = NULL;
+      return;
+    }
   } else {
     while (last->next != NULL)
       last = last->next;
 
     int roomInLastBlock = blockSize - last->bytesUsed;
     int fillLastBlock = MIN(roomInLastBlock, bytes);
-    last->bytesUsed += fillLastBlock;
     last->next = allocBlocks(disk, bytes - fillLastBlock, blockSize);
+    ldiskMerge(disk);
+    if (last->next == ALLOC_ERROR) {
+      last->next = NULL;
+      return;
+    }
+    last->bytesUsed += fillLastBlock;
   }
-
-  ldiskMerge(disk);
 
   file->size += bytes;
   file->time = now();
