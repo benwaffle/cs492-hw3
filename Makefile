@@ -1,4 +1,4 @@
-CFLAGS = -std=c99 -g -Og -Wall -Wextra
+CFLAGS = -std=c99 -g -O0 -Wall -Wextra
 LDLIBS = -lm
 
 main: main.c vector.c
