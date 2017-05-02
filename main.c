@@ -1,3 +1,8 @@
+/*
+ * Ben Iofel and Philip Fishbein
+ * I pledge my honor that I have abided by the Stevens Honor System.
+ */
+
 // vim: set et sw=2 ts=2 sts=2:
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE // strptime
